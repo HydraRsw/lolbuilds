@@ -23,7 +23,7 @@ Windows mostrará un aviso de SmartScreen la primera vez porque el exe no está 
 Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedio; tableros por etapa (inicio, medio y final) con posicionamiento en hexágonos, qué agregar o quitar entre etapas, carries con sus objetos, componentes a priorizar, guía «Cómo jugarla» y botón para copiar el código del Planificador de equipo. 
 
 **Overlay de TFT:** dos ventanas siempre visibles encima del juego (TFT en modo *sin bordes*), sin barra de título: se arrastran desde ⠿ y recuerdan su posición. Se abren solas al empezar una partida de TFT (configurable) o con el botón de la pestaña TFT.
-- **Composiciones** (derecha): compos meta con su tablero por etapa, objetos de los carries, componentes y botón para fijar tu compo.
+- **Composiciones** (derecha): muestra 2 compos a la vez (desplázate para ver más; al abrir una crece para mostrar su tablero) con su tablero por etapa, objetos de los carries, componentes y botón para fijar tu compo.
 - **Recetas** (barra horizontal): un componente por casilla; al hacer clic se despliega debajo todo lo que arma con cada otro componente, con estadísticas y en qué compos se usa. Los objetos de tu compo fijada se marcan en dorado.
 - Atajos (controlan las dos): **Ctrl+Shift+X** ocultar/mostrar, **Ctrl+Shift+Z** dejar pasar los clics al juego.
 

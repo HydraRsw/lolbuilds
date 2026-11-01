@@ -23,7 +23,7 @@ const avgOf = k => T.stats?.items?.[k]?.avg;
 
 /* ---------- comps tab ---------- */
 function compCard(d) {
-  const s = d.stat?.deck || {}, pinned = d.id === OV.pin, open = OV.open === d.id || pinned;
+  const s = d.stat?.deck || {}, pinned = d.id === OV.pin, open = OV.open === d.id;
   const units = [...d.units].sort((a, b) => unitInfo(a.key).cost - unitInfo(b.key).cost);
   let body = '';
   if (open) {
@@ -54,20 +54,47 @@ function compCard(d) {
     ${body}</div>`;
 }
 
+// Search + tier chips live in the sticky header (rendered once so typing keeps focus).
+function renderOvTools() {
+  const t = $('#ovTools');
+  if (!t || t.dataset.ready) return;
+  t.dataset.ready = 1;
+  t.innerHTML = `<div class="ov-tools"><input id="ovq" placeholder="Buscar campeón o sinergia…" value="${esc(OV.q)}"></div>
+    <div class="chips" id="ovTier">${['ALL', 'OP', 'S', 'A', 'B', 'C'].map(x => `<button data-t="${x}" class="${OV.tier === x ? 'on' : ''}">${x === 'ALL' ? 'Todas' : x}</button>`).join('')}</div>`;
+  $('#ovq').oninput = e => { OV.q = e.target.value; view.scrollTop = 0; renderOvComps(); };
+  $('#ovTier').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    OV.tier = b.dataset.t; $$('#ovTier button').forEach(x => x.classList.toggle('on', x === b));
+    view.scrollTop = 0; renderOvComps();
+  };
+}
+
 function renderOvComps() {
+  renderOvTools();
   const decks = T.comps || [];
   const n = norm(OV.q);
   let list = decks.filter(d => d.id !== OV.pin && (OV.tier === 'ALL' || d.stat?.opTier === OV.tier));
   if (n) list = list.filter(d => norm(deckName(d)).includes(n) || d.units.some(u => norm(unitInfo(u.key).name).includes(n)) || (d.traits || []).some(x => x.style > 0 && norm(traitInfo(x.key, x.meta?.name).name).includes(n)));
   list.sort((a, b) => (TIER_ORDER[a.stat?.opTier] ?? 9) - (TIER_ORDER[b.stat?.opTier] ?? 9) || (a.stat?.deck?.avgPlacement || 9) - (b.stat?.deck?.avgPlacement || 9));
   const pin = pinnedDeck();
-  view.innerHTML = `
-    ${pin ? compCard(pin) : ''}
-    <div class="ov-tools"><input id="ovq" placeholder="Buscar campeón o sinergia…" value="${esc(OV.q)}"></div>
-    <div class="chips" id="ovTier">${['ALL', 'OP', 'S', 'A', 'B', 'C'].map(t => `<button data-t="${t}" class="${OV.tier === t ? 'on' : ''}">${t === 'ALL' ? 'Todas' : t}</button>`).join('')}</div>
-    ${list.map(compCard).join('') || '<p class="empty">Sin resultados.</p>'}`;
-  const q = $('#ovq');
-  q.oninput = e => { OV.q = e.target.value; const pos = q.selectionStart; renderOvComps(); const nq = $('#ovq'); nq.focus(); nq.setSelectionRange(pos, pos); };
+  view.innerHTML = `${pin ? compCard(pin) : ''}${list.map(compCard).join('') || '<p class="empty">Sin resultados.</p>'}`;
+  requestAnimationFrame(ovFit);
+}
+
+// Window height: header + exactly 2 comps (the rest scrolls). An opened comp
+// gets enough room to show its board, up to a cap, and shrinks back when closed.
+const OV_MAX_OPEN = 560;
+function ovFit() {
+  const top = $('.ov-top').offsetHeight;
+  const cards = $$('#ov .oc');
+  const opened = cards.find(c => c.querySelector('.oc-b'));
+  let listH;
+  if (opened) listH = Math.min(opened.offsetHeight + 20, OV_MAX_OPEN);
+  else listH = cards.slice(0, 2).reduce((s, c) => s + c.offsetHeight + 8, 0) + 12 || 120;
+  const h = top + listH;
+  document.documentElement.style.setProperty('--list-h', listH + 'px');
+  if (window.ovSize) ovSize(window.innerWidth, h);
+  if (opened) opened.scrollIntoView({ block: 'nearest' });
 }
 
 function ovOpenComp(id) { OV.open = OV.open === id ? null : id; renderOv(); }
@@ -79,11 +106,9 @@ view.addEventListener('click', async e => {
   const st = e.target.closest('[data-stage]');
   if (st) { const id = st.closest('.oc').dataset.id; OV.stage[id] = +st.dataset.stage; renderOv(); return; }
   const pin = e.target.closest('[data-pin]');
-  if (pin) { OV.pin = OV.pin === pin.dataset.pin ? null : pin.dataset.pin; OV.open = null; ovSave(); window.scrollTo(0, 0); renderOv(); toast(OV.pin ? 'Compo fijada arriba' : 'Compo quitada'); return; }
+  if (pin) { OV.pin = OV.pin === pin.dataset.pin ? null : pin.dataset.pin; OV.open = null; ovSave(); view.scrollTop = 0; renderOv(); toast(OV.pin ? 'Compo fijada arriba' : 'Compo quitada'); return; }
   const code = e.target.closest('[data-code]');
   if (code) { try { await navigator.clipboard.writeText(code.dataset.code); toast('Código copiado ✔'); } catch { } return; }
-  const t = e.target.closest('#ovTier button');
-  if (t) { OV.tier = t.dataset.t; renderOv(); return; }
   const card = e.target.closest('.oc');
   if (card && !e.target.closest('.oc-b')) ovOpenComp(card.dataset.id);
 });

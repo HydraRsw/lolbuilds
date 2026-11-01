@@ -146,10 +146,7 @@ func runOverlay(url, kind string) {
 		w, h = scale(560), scale(62)
 		x, y = scale(16), scale(110)
 	} else {
-		w, h = scale(400), scale(780)
-		if max := int32(sh) - scale(140); h > max {
-			h = max
-		}
+		w, h = scale(400), scale(330) // the page fits it to 2 comps right after loading
 		x, y = int32(sw)-w-scale(16), scale(70)
 	}
 	var saved savedPos
@@ -189,8 +186,11 @@ func runOverlay(url, kind string) {
 		pPostMessage.Call(hw, wmNCLButtonDown, htCaption, 0)
 	})
 	_ = wv.Bind("ovSize", func(cw, ch float64) {
-		if kind != "recipes" || cw < 50 || ch < 20 {
+		if cw < 50 || ch < 20 {
 			return
+		}
+		if max := float64(sh)*96/float64(dpi) - 80; ch > max {
+			ch = max // never taller than the screen
 		}
 		pSetWindowPos.Call(hw, 0, 0, 0, uintptr(scale(cw)), uintptr(scale(ch)), swpNoMove|swpNoActivate)
 	})
