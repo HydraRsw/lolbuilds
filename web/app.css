@@ -392,3 +392,7 @@ table.recipes td{background:var(--bg2);border:1px solid var(--line)}
 .tr-desc{color:#b9bfcc;font-size:12.5px;line-height:1.5;max-height:150px;overflow:auto}
 @media (max-width:1100px){.comp-row{grid-template-columns:48px 1fr}.comp-row .cstats{grid-column:1/-1}.stage-grid{grid-template-columns:1fr}}
 .upd-banner[hidden]{display:none}
+
+.upd-banner{position:sticky;top:96px;z-index:40;cursor:pointer;background:linear-gradient(90deg,#3a2a0a,#241c0c);border-color:var(--gold);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.upd-banner:hover{border-color:#ffd36b}
+.upd-ico{font-style:normal;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--gold);color:#111;font-weight:900;flex:none}

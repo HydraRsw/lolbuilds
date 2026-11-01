@@ -239,7 +239,6 @@ const view = $('#view');
 const go = h => { if (location.hash === h) route(); else location.hash = h; };
 let routeToken = 0;
 async function route() {
-  if (upd.reloadOnNav && !['ChampSelect', 'InProgress'].includes(lcuState.phase)) { location.reload(); return; }
   const token = ++routeToken;
   const parts = (location.hash.replace(/^#\/?/, '') || '').split('/').filter(Boolean);
   const [p0, p1, p2, p3] = parts;
@@ -972,8 +971,15 @@ function cmpVer(a, b) {
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const d = (pa[i] || 0) - (pb[i] || 0); if (d) return d > 0 ? 1 : -1; }
   return 0;
 }
+function installUpdate() {
+  const b = $('#updBanner');
+  b.innerHTML = '<i class="upd-ico">⬆</i><b>Instalando…</b><span>La app se reiniciará en un momento</span>';
+  if (upd.action === 'restart') fetch('/api/update/restart', { method: 'POST' }).catch(() => { });
+  else setTimeout(() => location.reload(), 400);
+}
 function banner(html) {
   const b = $('#updBanner');
+  b.onclick = installUpdate;
   if (!html) { b.hidden = true; return; }
   b.innerHTML = html; b.hidden = false;
 }
@@ -981,11 +987,10 @@ async function pollUpdate() {
   try {
     const s = await (await fetch('/api/update/status')).json();
     upd.status = s;
-    if (s.exeReady) {
-      banner(`<b>Actualización ${esc(s.latest)} instalada.</b> <span>${esc(s.notes || '')}</span><button class="btn sm" onclick="fetch('/api/update/restart',{method:'POST'})">Reiniciar ahora</button>`);
-    } else if (UI_VERSION && s.ui && cmpVer(s.ui, UI_VERSION) > 0) {
-      upd.reloadOnNav = true;
-      banner(`<b>Nueva versión ${esc(s.ui)} lista.</b> <span>${esc(s.notes || '')}</span><button class="btn sm" onclick="location.reload()">Aplicar ahora</button>`);
+    // Updates are downloaded in the background; the banner installs them on click.
+    if (s.exeReady || (UI_VERSION && s.ui && cmpVer(s.ui, UI_VERSION) > 0)) {
+      upd.action = s.exeReady ? 'restart' : 'reload';
+      banner(`<i class="upd-ico">⬆</i><b>Actualización ${esc(s.latest || s.ui)} disponible</b><span>${esc(s.notes || 'Clic para instalar')}</span><button class="btn sm">Clic para instalar</button>`);
     }
     drawVersion();
   } catch { }

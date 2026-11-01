@@ -27,9 +27,45 @@ function tftLoadComps() {
   return tftCompsP ??= tftJSON('/api/tft/comps', Date.now() < S.freshUntil).then(j => {
     T.comps = j.decks || [];
     for (const d of T.comps) for (const u of d.units || []) if (u.meta) T.metaUnit[u.key] = u.meta;
+    for (const d of T.comps) fillMissingBoards(d, T.comps);
     return T.comps;
   }).catch(e => { tftCompsP = null; throw e; });
 }
+// Some OP.GG comps come without positions or early/mid boards. Fill them from the most
+// similar comp that has them; whatever is still missing gets an automatic placement.
+const TANK_ITEM = /Warmog|Gargoyle|SpiritVisage|DragonsClaw|Bramble|Sunfire|Redemption|ProtectorsVow|AdaptiveHelm|Crownguard|Evenshroud|SteadfastHeart|Titans|Thiefs/i;
+function fillMissingBoards(d, all) {
+  const noCells = d.units.some(u => !u.cell);
+  const noEarly = !d.early?.units?.length, noMid = !d.middle?.units?.length;
+  if (!noCells && !noEarly && !noMid) return;
+  const keys = new Set(d.units.map(u => u.key));
+  let donor = null, best = 0;
+  for (const o of all) {
+    if (o === d || !o.early?.units?.length || o.units.some(u => !u.cell)) continue;
+    const shared = o.units.filter(u => keys.has(u.key)).length;
+    if (shared > best) { best = shared; donor = o; }
+  }
+  const similar = donor && best >= Math.min(5, d.units.length - 2);
+  if (similar) {
+    if (noEarly) d.early = donor.early;
+    if (noMid) d.middle = donor.middle;
+    if (noEarly || noMid) d._boardsFrom = deckName(donor);
+  }
+  if (!noCells) return;
+  const taken = new Set(d.units.filter(u => u.cell).map(u => u.cell.x + ',' + u.cell.y));
+  if (similar) for (const u of d.units) {
+    if (u.cell) continue;
+    const c = donor.units.find(x => x.key === u.key)?.cell;
+    if (c && !taken.has(c.x + ',' + c.y)) { u.cell = { ...c }; taken.add(c.x + ',' + c.y); }
+  }
+  // automatic placement: carries without tank items in the back row, the rest in front
+  const back = [[1, 1], [7, 1], [2, 1], [6, 1], [3, 1], [5, 1], [4, 1], [1, 2], [7, 2]];
+  const front = [[4, 4], [3, 4], [5, 4], [2, 4], [6, 4], [1, 4], [7, 4], [4, 3], [3, 3], [5, 3], [2, 3], [6, 3]];
+  const place = (u, spots) => { const s = spots.find(([x, y]) => !taken.has(x + ',' + y)); if (s) { u.cell = { x: s[0], y: s[1] }; taken.add(s.join(',')); } };
+  const isBack = u => u.isCore && !(u.items || []).some(i => TANK_ITEM.test(i));
+  for (const u of d.units.filter(u => !u.cell)) { place(u, isBack(u) ? back : front); d._autoPos = true; }
+}
+
 function placesStats(places) {
   const games = places.reduce((a, b) => a + b, 0) || 1;
   return { games, avg: places.reduce((s, p, i) => s + p * (i + 1), 0) / games, top4: places.slice(0, 4).reduce((a, b) => a + b, 0) / games, win: places[0] / games };
@@ -288,6 +324,7 @@ async function renderComp(t, id) {
     </div>
     <div class="card" style="margin-bottom:14px">
       <h3>Tableros por etapa <small>posicionamiento recomendado</small></h3>
+      ${d._boardsFrom || d._autoPos ? `<p class="fine" style="margin:-4px 0 12px">OP.GG no publica tableros para esta compo: ${d._boardsFrom ? `inicio y medio tomados de la compo similar «${esc(d._boardsFrom)}»` : ''}${d._boardsFrom && d._autoPos ? '; ' : ''}${d._autoPos ? 'la posición final es aproximada (tanques adelante, carries atrás)' : ''}.</p>` : ''}
       <div class="seg" id="stageTabs" style="margin-bottom:14px">${stages.map((g, i) => `<button data-i="${i}">${g.l} · Nivel ${g.lvl}</button>`).join('')}</div>
       <div id="stageBody"></div>
     </div>
