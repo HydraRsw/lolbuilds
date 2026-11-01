@@ -25,6 +25,7 @@ Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedi
 **Overlay de TFT:** dos ventanas siempre visibles encima del juego (TFT en modo *sin bordes*), sin barra de título: se arrastran desde ⠿ y recuerdan su posición. Se abren solas al empezar una partida de TFT (configurable) o con el botón de la pestaña TFT.
 - **Composiciones** (derecha): muestra 2 compos a la vez (desplázate para ver más; al abrir una crece para mostrar su tablero) con su tablero por etapa, objetos de los carries, componentes y botón para fijar tu compo.
 - **Recetas** (barra horizontal): un componente por casilla; al hacer clic se despliega debajo todo lo que arma con cada otro componente, con estadísticas y en qué compos se usa. Los objetos de tu compo fijada se marcan en dorado.
+- Pasa el mouse sobre un campeón (en el overlay o en la app) para ver sus objetos en esa compo, sus objetos ideales (BIS) y alternativas.
 - Atajos (controlan las dos): **Ctrl+Shift+X** ocultar/mostrar, **Ctrl+Shift+Z** dejar pasar los clics al juego.
 
 Además: campeones con objetos ideales (BIS), tier list de objetos con recetas, emblemas y artefactos, y sinergias con el rendimiento de cada umbral (MetaTFT).

@@ -39,9 +39,9 @@ function compCard(d) {
     body = `<div class="oc-b">
       <h5>Tablero</h5>
       <div class="stg">${stages.map((x, i) => `<button data-stage="${i}" class="${i === cur ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
-      <div class="mini-board">${board(st[2], { items: st[0] === 'final' })}</div>
+      <div class="mini-board">${board(st[2], { items: st[0] === 'final', deck: d.id })}</div>
       <h5>Objetos de los carries</h5>
-      ${carries.map(u => `<div class="ci">${tUnitImg(u.key, 'xs')}<b style="font-size:12px">${esc(unitInfo(u.key).name)}</b><span class="rec">${u.items.map(it => tItemImg(it)).join('')}</span></div>`).join('')}
+      ${carries.map(u => `<div class="ci">${tUnitImg(u.key, 'xs', d.id)}<b style="font-size:12px">${esc(unitInfo(u.key).name)}</b><span class="rec">${u.items.map(it => tItemImg(it)).join('')}</span></div>`).join('')}
       ${Object.keys(comp).length ? `<h5>Componentes</h5><div class="comp-needed">${Object.entries(comp).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span>${tItemImg(c, 'ti sm')}<b>×${n}</b></span>`).join('')}</div>` : ''}
       <div class="oc-actions"><button class="btn sm ${pinned ? 'ghost' : ''}" data-pin="${esc(d.id)}">${pinned ? 'Quitar fijado' : '📌 Fijar esta compo'}</button>
       ${d.teamCode ? `<button class="btn ghost sm" data-code="${esc(d.teamCode)}">Copiar código</button>` : ''}</div>
@@ -50,7 +50,7 @@ function compCard(d) {
   return `<div class="oc ${pinned ? 'pinned' : ''}" data-id="${esc(d.id)}">
     <div class="oc-h"><span class="tier ${TIER_CLS(d.stat?.opTier)}">${esc(d.stat?.opTier || '?')}</span><span class="nm">${pinned ? '📌 ' : ''}${esc(deckName(d))}</span>
       <span class="st"><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b> prom · <b>${pct(s.top4Rate, 0)}</b> top4</span></div>
-    <div class="oc-u">${units.map(u => tUnit(u.key, { stars: u.tier, items: u.items, carry: u.isCore, name: false })).join('')}</div>
+    <div class="oc-u">${units.map(u => tUnit(u.key, { stars: u.tier, items: u.items, carry: u.isCore, name: false, deck: d.id })).join('')}</div>
     ${body}</div>`;
 }
 
@@ -113,12 +113,14 @@ view.addEventListener('click', async e => {
   if (card && !e.target.closest('.oc-b')) ovOpenComp(card.dataset.id);
 });
 
+document.body.classList.add('ovl');
 (async function bootOverlay() {
   try {
     await Promise.all([tftLoadStatic().catch(() => { }), tftLoadComps()]);
   } catch (e) { view.innerHTML = errorBox(e); return; }
   renderOv();
   ovSave(); // share the pinned comp with the recipe bar
+  tftLoadStats().catch(() => { }); // BIS items and averages for the champion tooltips
   // pick up new comps (OP.GG refresh) every 30 min without reopening the overlay
   setInterval(async () => { tftCompsP = null; try { await tftLoadComps(); if (OV.tab === 'comps' && !document.activeElement?.matches('input')) renderOv(); } catch { } }, 30 * 60 * 1000);
 })();

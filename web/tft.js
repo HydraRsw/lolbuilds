@@ -96,13 +96,14 @@ function traitInfo(key, metaName) {
   const t = T.trait[key];
   return { key, name: t?.name || metaName || key.replace(/^[A-Z]+_(\d+_)?|\d+$/g, ''), icon: t?.icon || '', effects: t?.effects || [] };
 }
-const tUnitImg = (key, cls = '') => { const u = unitInfo(key); return `<img class="tu-img ${COST_CLS(u.cost)} ${cls}" src="${u.icon || ph(u.name)}" data-fb="${u.fb}" alt="${esc(u.name)}" loading="lazy" data-tip="tft-unit:${key}">`; };
+const unitTip = (key, deck) => 'tft-unit:' + encodeURIComponent(key + (deck ? '@' + deck : ''));
+const tUnitImg = (key, cls = '', deck = '') => { const u = unitInfo(key); return `<img class="tu-img ${COST_CLS(u.cost)} ${cls}" src="${u.icon || ph(u.name)}" data-fb="${u.fb}" alt="${esc(u.name)}" loading="lazy" data-tip="${unitTip(key, deck)}">`; };
 const tItemImg = (key, cls = 'ti') => { const i = itemInfo(key); return `<img class="${cls}" src="${i.icon}" data-fb="${i.fb}" alt="${esc(i.name)}" loading="lazy" data-tip="tft-item:${key}">`; };
-function tUnit(key, { stars = 0, items = [], carry = false, name = true } = {}) {
+function tUnit(key, { stars = 0, items = [], carry = false, name = true, deck = '' } = {}) {
   const u = unitInfo(key);
   return `<a class="tu ${carry ? 'carry' : ''}" href="#/tft/champ/${encodeURIComponent(key)}">
     ${stars > 1 ? `<span class="stars s${stars}">${'★'.repeat(stars)}</span>` : ''}
-    ${tUnitImg(key)}
+    ${tUnitImg(key, '', deck)}
     ${items.length ? `<span class="tu-items">${items.map(i => tItemImg(i, 'ti xs')).join('')}</span>` : ''}
     ${name ? `<span class="tu-name">${esc(u.name)}</span>` : ''}</a>`;
 }
@@ -147,8 +148,25 @@ function traitDesc(t) {
 /* tooltips (called from app.js tipHTML) */
 function tftTip(kind, key) {
   if (kind === 'unit') {
-    const u = unitInfo(key), c = T.champ[key], st = T.stats?.units?.[key];
-    return `<b>${esc(u.name)}</b><span class="g">Costo ${u.cost}${u.traits.length ? ' · ' + esc(u.traits.join(', ')) : ''}</span>${c?.ability ? `<p><i>${esc(c.ability.name)}</i>: ${tftDesc(c.ability.desc, c.ability.vars).slice(0, 420)}</p>` : ''}${st ? `<p>Prom. ${st.avg.toFixed(2)} · Top 4 ${pct(st.top4)}</p>` : ''}`;
+    const [ukey, deckId] = key.split('@');
+    const u = unitInfo(ukey), c = T.champ[ukey], st = T.stats?.units?.[ukey];
+    const deck = deckId && (T.comps || []).find(d => d.id === deckId);
+    const inComp = (deck?.units.find(x => x.key === ukey)?.items || []).filter(Boolean);
+    const bis = (T.uip?.units?.[ukey]?.items || []).map(x => x.itemName);
+    // items players actually slam on this unit across the meta comps
+    const metaCount = {};
+    for (const d of T.comps || []) for (const x of d.units) if (x.key === ukey) for (const it of x.items || []) metaCount[it] = (metaCount[it] || 0) + 1;
+    const metaItems = Object.entries(metaCount).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+    const best = (bis.length ? bis : metaItems).slice(0, 3);
+    const alts = [...new Set([...bis.slice(3), ...metaItems])].filter(k => !best.includes(k) && !inComp.includes(k)).slice(0, 5);
+    const row = list => `<div class="tt-items">${list.map(k => `<span><img src="${itemInfo(k).icon}" data-fb="${itemInfo(k).fb}" alt=""><small>${esc(itemInfo(k).name)}</small></span>`).join('')}</div>`;
+    const compact = document.body.classList.contains('ovl');
+    return `<b>${esc(u.name)}</b><span class="g">Costo ${u.cost}${u.traits.length ? ' · ' + esc(u.traits.join(', ')) : ''}${compact && st ? ` · prom. ${st.avg.toFixed(2)}` : ''}</span>
+      ${inComp.length ? `<div class="tt-h">En esta compo</div>${row(inComp)}` : ''}
+      ${best.length ? `<div class="tt-h">Objetos ideales (BIS)</div>${row(best)}` : '<p>Sin datos de objetos para esta unidad.</p>'}
+      ${alts.length ? `<div class="tt-h">Alternativas</div><div class="tt-alts">${alts.map(k => `<img src="${itemInfo(k).icon}" data-fb="${itemInfo(k).fb}" alt="" title="${esc(itemInfo(k).name)}">`).join('')}</div>` : ''}
+      ${st && !compact ? `<p>Prom. ${st.avg.toFixed(2)} · Top 4 ${pct(st.top4)}</p>` : ''}
+      ${c?.ability && !compact ? `<p class="tt-abil"><i>${esc(c.ability.name)}</i>: ${tftDesc(c.ability.desc, c.ability.vars).slice(0, 260)}</p>` : ''}`;
   }
   if (kind === 'item') {
     const i = itemInfo(key), raw = T.item[key], st = T.stats?.items?.[key];
@@ -219,7 +237,7 @@ async function renderComps(t) {
         <div class="cmain">
           <div class="cname">${esc(deckName(d))}${diff ? `<span class="diff ${diff[1]}">${diff[0]}</span>` : ''}${playStyle(d) ? `<span class="pill">${esc(playStyle(d))}</span>` : ''}</div>
           <div class="ctraits">${(d.traits || []).filter(x => x.style > 0).sort((a, b) => b.style - a.style).map(traitChip).join('')}</div>
-          <div class="cunits">${units.map(u => tUnit(u.key, { stars: u.tier, items: u.items, carry: u.isCore })).join('')}</div>
+          <div class="cunits">${units.map(u => tUnit(u.key, { stars: u.tier, items: u.items, carry: u.isCore, deck: d.id })).join('')}</div>
         </div>
         <div class="cstats">
           <div><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b><span>Prom.</span></div>
@@ -245,7 +263,7 @@ function playStyle(d) {
 }
 
 /* ---------- hex board ---------- */
-function board(units, { items = true } = {}) {
+function board(units, { items = true, deck = '' } = {}) {
   // OP.GG cells: x 1..7, y 1..4 (y=4 is the front row). Front row is drawn on top.
   const W = 66, H = 58;
   const cells = [];
@@ -257,7 +275,7 @@ function board(units, { items = true } = {}) {
     const p = pos(c), u = at[c.x + ',' + c.y];
     if (!u) return `<div class="hex empty" style="left:${p.left}px;top:${p.top}px"></div>`;
     const key = u.key || u.characterId, info = unitInfo(key), its = (u.items || []).filter(Boolean);
-    return `<a class="hex ${COST_CLS(info.cost)} ${u.isCore ? 'carry' : ''}" style="left:${p.left}px;top:${p.top}px" href="#/tft/champ/${encodeURIComponent(key)}" data-tip="tft-unit:${key}">
+    return `<a class="hex ${COST_CLS(info.cost)} ${u.isCore ? 'carry' : ''}" style="left:${p.left}px;top:${p.top}px" href="#/tft/champ/${encodeURIComponent(key)}" data-tip="${unitTip(key, deck)}">
       <span class="hexin"><img src="${info.icon || ph(info.name)}" data-fb="${info.fb}" alt="${esc(info.name)}"></span>
       ${u.tier > 1 ? `<span class="stars s${u.tier}">${'★'.repeat(u.tier)}</span>` : ''}
       ${items && its.length ? `<span class="hex-items">${its.map(i => tItemImg(i, 'ti xs')).join('')}</span>` : ''}</a>`;
@@ -292,14 +310,14 @@ async function renderComp(t, id) {
     const roundWr = sg.st && (sg.st.win + sg.st.lose) ? sg.st.win / (sg.st.win + sg.st.lose) : null;
     $('#stageBody').innerHTML = `
       <div class="stage-grid">
-        <div>${board(sg.units, { items: sg.k === 'final' })}
+        <div>${board(sg.units, { items: sg.k === 'final', deck: d.id })}
           ${roundWr != null ? `<p class="muted" style="font-size:12.5px;margin:10px 0 0">Este tablero gana el <b class="${roundWr >= .5 ? 'wr-good' : ''}">${pct(roundWr)}</b> de las rondas (${fmt(sg.st.play)} partidas).</p>` : ''}
         </div>
         <div class="stage-side">
           <h4>Sinergias activas</h4>
           <div class="ctraits">${(sg.traits || []).filter(x => x.style > 0).sort((a, b) => b.style - a.style).map(traitChip).join('') || '<span class="muted">—</span>'}</div>
           ${prev ? `<h4>Qué cambiar desde «${prev.l}»</h4>
-            ${added.length ? `<div class="chg add"><span>Agregar</span><div>${added.map(k => tUnit(k, { name: true })).join('')}</div></div>` : ''}
+            ${added.length ? `<div class="chg add"><span>Agregar</span><div>${added.map(k => tUnit(k, { name: true, deck: d.id })).join('')}</div></div>` : ''}
             ${removed.length ? `<div class="chg rem"><span>Quitar</span><div>${removed.map(k => tUnit(k, { name: true })).join('')}</div></div>` : ''}
             ${!added.length && !removed.length ? '<p class="muted">Mismas unidades; mejora estrellas y posiciones.</p>' : ''}` : `<h4>Unidades</h4><div class="cunits">${sg.units.map(u => tUnit(keyOf(u))).join('')}</div>`}
         </div>
@@ -330,9 +348,9 @@ async function renderComp(t, id) {
     </div>
     <div class="two">
       <div class="card"><h3>Carries y objetos</h3>
-        ${carries.map((u, i) => `<div class="carry-row"><span class="prio">${i + 1}</span>${tUnit(u.key, { stars: u.tier, name: true })}<div class="its">${u.items.map(it => `${tItemImg(it, 'ti')}`).join('')}</div>
+        ${carries.map((u, i) => `<div class="carry-row"><span class="prio">${i + 1}</span>${tUnit(u.key, { stars: u.tier, name: true, deck: d.id })}<div class="its">${u.items.map(it => `${tItemImg(it, 'ti')}`).join('')}</div>
           <div class="alt">${bisFor(u.key, u.items).map(it => tItemImg(it, 'ti sm')).join('')}</div></div>`).join('')}
-        ${holders.map(u => `<div class="carry-row tank"><span class="prio">·</span>${tUnit(u.key, { stars: u.tier, name: true })}<div class="its">${u.items.map(it => tItemImg(it, 'ti')).join('')}</div><div class="alt"></div></div>`).join('')}
+        ${holders.map(u => `<div class="carry-row tank"><span class="prio">·</span>${tUnit(u.key, { stars: u.tier, name: true, deck: d.id })}<div class="its">${u.items.map(it => tItemImg(it, 'ti')).join('')}</div><div class="alt"></div></div>`).join('')}
         ${compList.length ? `<h4 class="sub">Componentes a priorizar</h4><div class="comp-needed">${compList.map(([c, n]) => `<span>${tItemImg(c, 'ti sm')}<b>×${n}</b></span>`).join('')}</div>` : ''}
         <p class="fine">A la derecha: alternativas con mejores resultados según MetaTFT.</p>
       </div>
