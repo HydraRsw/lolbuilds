@@ -26,17 +26,17 @@ var webFS embed.FS
 
 // appVersion is the version of this executable (Go backend + embedded UI).
 // Overridden at build time with -ldflags "-X main.appVersion=1.2.3".
-var appVersion = "1.2.0"
+var appVersion = "1.2.1"
 
-// updateRepo hosts releases. Each release carries:
+// Updates are published on the "updates" branch of the GitHub repo:
 //
 //	update.json   manifest (versions + sha256)
 //	web.zip       the UI (index.html, app.js, …) — lets UI changes ship without a new .exe
-//	LoLBuilds.exe only needed when the Go side changed
+//	LoLBuilds.exe the full app; installed copies only replace themselves when "exe" is newer
 var updateRepo = "HydraRsw/lolbuilds"
 
-// updateAPI can be pointed at a local mock for testing (LOLB_UPDATE_API).
-var updateAPI = "https://api.github.com"
+// updateBase can be pointed at a local mock for testing (LOLB_UPDATE_BASE).
+var updateBase = "https://raw.githubusercontent.com/" + updateRepo + "/updates"
 
 type manifest struct {
 	Version   string `json:"version"`
@@ -72,11 +72,8 @@ type updater struct {
 func newUpdater() *updater {
 	sub, _ := fs.Sub(webFS, "web")
 	v := readUIVersion(sub)
-	if r := os.Getenv("LOLB_UPDATE_REPO"); r != "" {
-		updateRepo = r
-	}
-	if a := os.Getenv("LOLB_UPDATE_API"); a != "" {
-		updateAPI = a
+	if b := os.Getenv("LOLB_UPDATE_BASE"); b != "" {
+		updateBase = strings.TrimRight(b, "/")
 	}
 	return &updater{
 		client:    &http.Client{Timeout: 5 * time.Minute},
@@ -179,9 +176,6 @@ func (u *updater) setErr(err error) {
 func (u *updater) get(url string, max int64) ([]byte, error) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "LoLBuilds/"+appVersion)
-	if strings.Contains(url, "/repos/") {
-		req.Header.Set("Accept", "application/vnd.github+json")
-	}
 	resp, err := u.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -207,38 +201,17 @@ func (u *updater) check() {
 		u.mu.Unlock()
 	}()
 
-	b, err := u.get(updateAPI+"/repos/"+updateRepo+"/releases/latest", 2<<20)
+	// The query string skips the CDN cache so a new version is seen right away.
+	mb, err := u.get(fmt.Sprintf("%s/update.json?t=%d", updateBase, time.Now().Unix()), 1<<20)
 	if err != nil {
 		if he, ok := err.(*httpError); ok && he.code == 404 {
-			u.setErr(nil) // no releases published yet
+			u.setErr(nil) // nothing published yet
 			return
 		}
 		u.setErr(fmt.Errorf("no se pudo buscar actualizaciones: %w", err))
 		return
 	}
-	var rel struct {
-		Assets []struct {
-			Name string `json:"name"`
-			URL  string `json:"browser_download_url"`
-		} `json:"assets"`
-	}
-	if err := json.Unmarshal(b, &rel); err != nil {
-		u.setErr(err)
-		return
-	}
-	assets := map[string]string{}
-	for _, a := range rel.Assets {
-		assets[a.Name] = a.URL
-	}
-	if assets["update.json"] == "" {
-		u.setErr(nil)
-		return
-	}
-	mb, err := u.get(assets["update.json"], 1<<20)
-	if err != nil {
-		u.setErr(err)
-		return
-	}
+	assets := map[string]string{"web.zip": updateBase + "/web.zip", "LoLBuilds.exe": updateBase + "/LoLBuilds.exe"}
 	var m manifest
 	if err := json.Unmarshal(mb, &m); err != nil {
 		u.setErr(err)
@@ -250,7 +223,7 @@ func (u *updater) check() {
 	u.mu.Unlock()
 
 	// 1) New executable (only when the Go side changed).
-	if cmpVer(m.Exe, appVersion) > 0 && !exeReady && assets["LoLBuilds.exe"] != "" && runtime.GOOS == "windows" {
+	if cmpVer(m.Exe, appVersion) > 0 && !exeReady && m.ExeSHA256 != "" && runtime.GOOS == "windows" {
 		if err := u.installExe(assets["LoLBuilds.exe"], m.ExeSHA256); err != nil {
 			u.setErr(fmt.Errorf("no se pudo instalar la nueva versión: %w", err))
 			return
@@ -262,7 +235,7 @@ func (u *updater) check() {
 	}
 
 	// 2) New UI, applied live without restarting.
-	if cmpVer(m.UI, curUI) > 0 && assets["web.zip"] != "" {
+	if cmpVer(m.UI, curUI) > 0 && m.UISHA256 != "" {
 		if cmpVer(m.MinExe, appVersion) > 0 {
 			// This UI needs the newer exe; it is embedded in it, so a restart covers it.
 			u.setErr(nil)

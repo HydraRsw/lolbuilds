@@ -2,6 +2,9 @@
 
 App de escritorio para Windows con builds, runas, orden de habilidades, tier list y aumentos (ARAM Mayhem y Arena) de League of Legends, al estilo OP.GG / Blitz.
 
+## Descarga
+[LoLBuilds.exe](https://github.com/HydraRsw/lolbuilds/raw/updates/LoLBuilds.exe) — después se actualiza sola.
+
 ## Uso
 1. Ejecuta `LoLBuilds.exe` (no requiere instalación).
 2. Busca un campeón (Ctrl+K) o navega por Inicio, Campeones, Tier List, ARAM Mayhem y Arena.
@@ -21,8 +24,8 @@ Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedi
 
 ## Actualizaciones automáticas
 - **Datos y parches:** cada vez que sale un parche la app lo detecta (revisa cada hora) y descarga las builds, runas y tier lists nuevas sola.
-- **La app:** revisa cada 3 horas las versiones publicadas en GitHub (`HydraRsw/lolbuilds`). Si solo cambió la interfaz, se aplica sola sin reiniciar ni descargar otro .exe. Si cambió el motor, reemplaza su propio .exe y pide reiniciar. Todo se verifica con SHA-256.
-- Publicar una versión: `./release.sh 1.2.1 "Notas"` (solo interfaz) o `./release.sh 1.3.0 "Notas" --exe`.
+- **La app:** revisa cada 3 horas la rama `updates` de este repositorio. Si solo cambió la interfaz, se aplica sola sin reiniciar ni descargar otro .exe. Si cambió el motor, reemplaza su propio .exe y pide reiniciar. Todo se verifica con SHA-256.
+- Publicar una versión: `./release.sh 1.2.2 "Notas"` (solo interfaz) o `./release.sh 1.3.0 "Notas" --exe`.
 
 ## Tecnología
 - **Go** + **WebView2** nativo de Windows (el mismo motor de Edge): un solo `.exe` de ~7 MB, arranque inmediato y poca RAM, sin Electron.

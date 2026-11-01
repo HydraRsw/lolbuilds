@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Publishes a new LoLBuilds version as a GitHub release that installed apps pick up automatically.
 #
-#   ./release.sh 1.2.1 "Notas de la versión"            -> UI-only update (no new .exe for users)
+#   ./release.sh 1.2.2 "Notas de la versión"            -> UI-only update (no new .exe for users)
 #   ./release.sh 1.3.0 "Notas" --exe                    -> also ships a new LoLBuilds.exe
 #
-# Apps check the latest release every 3 hours (and from Ajustes → Buscar actualizaciones):
+# Apps check the "updates" branch every 3 hours (and from Ajustes → Buscar actualizaciones):
 #   - UI changes (web/) are applied live, without restarting or downloading a new .exe.
 #   - When --exe is given, the app replaces its own .exe and asks to restart.
 set -euo pipefail
@@ -41,5 +41,20 @@ json.dump(m, open(f"{out}/update.json", "w"), indent=1)
 print(json.dumps(m, indent=1))
 EOF
 
-gh release create "v$VER" "$OUT"/* --repo "$REPO" --title "LoLBuilds $VER" --notes "${NOTES:-Actualización}"
-echo "Publicado v$VER en $REPO"
+# Publish: the "updates" branch holds only the latest files (installed apps read it).
+ORIGIN="$(git remote get-url origin)"
+TMP="$(mktemp -d)"
+cp "$OUT"/* "$TMP"/
+cat > "$TMP/README.md" <<EOR
+# LoLBuilds $VER
+
+Descarga: [LoLBuilds.exe](https://github.com/$REPO/raw/updates/LoLBuilds.exe)
+
+$NOTES
+EOR
+( cd "$TMP" && git init -q -b updates && git add -A && git commit -qm "LoLBuilds $VER" \
+  && (git push -q -f "$ORIGIN" updates || { git fetch -q "$ORIGIN" updates && git reset -q --soft FETCH_HEAD && git commit -qm "LoLBuilds $VER" && git push -q "$ORIGIN" updates; }) )
+rm -rf "$TMP"
+git add -A && git commit -qm "Versión $VER" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_012mZfAApuDJ5aCio7TP8oXT" || true
+git push -q origin main
+echo "Publicado v$VER en $REPO (rama updates)"
