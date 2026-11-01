@@ -10,7 +10,7 @@ App de escritorio para Windows con builds, runas, orden de habilidades, tier lis
 2. Busca un campeón (Ctrl+K) o navega por Inicio, Campeones, Tier List, ARAM Mayhem y Arena.
 3. Con el cliente de LoL abierto:
    - En la selección de campeón la app abre sola tu campeón, con el modo (Clasificatoria / ARAM Mayhem / Arena) y tu rol asignado.
-   - Al **fijar** tu campeón importa sola la build de objetos de ese campeón y modo (activado por defecto). En Ajustes puedes sumar runas y hechizos.
+   - Al **fijar** tu campeón (en ARAM / ARAM Mayhem, en cuanto te toca) importa sola la build de objetos, y si lo activas en Ajustes también runas y hechizos.
    - **Importar todo** mete runas, build y hechizos de una vez.
    - **Importar runas** reemplaza tu página actual (o la que creó la app, con prefijo «LB»).
    - **Aplicar** hechizos de invocador.
@@ -20,7 +20,11 @@ App de escritorio para Windows con builds, runas, orden de habilidades, tier lis
 Windows mostrará un aviso de SmartScreen la primera vez porque el exe no está firmado: «Más información» → «Ejecutar de todas formas».
 
 ## TFT
-Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedio; tableros por etapa (inicio, medio y final) con posicionamiento en hexágonos, qué agregar o quitar entre etapas, carries con sus objetos, componentes a priorizar, guía «Cómo jugarla» y botón para copiar el código del Planificador de equipo. Además: campeones con objetos ideales (BIS), tier list de objetos con recetas, emblemas y artefactos, y sinergias con el rendimiento de cada umbral (MetaTFT).
+Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedio; tableros por etapa (inicio, medio y final) con posicionamiento en hexágonos, qué agregar o quitar entre etapas, carries con sus objetos, componentes a priorizar, guía «Cómo jugarla» y botón para copiar el código del Planificador de equipo. 
+
+**Overlay de TFT:** ventana siempre visible encima del juego (TFT en modo *sin bordes*). Se abre sola al empezar una partida de TFT (configurable) o con el botón de la pestaña TFT. Muestra las compos meta con su tablero por etapa, te deja fijar tu compo, marcar los componentes que tienes para ver qué objetos puedes armar (resalta los de tu compo y los que te faltan por 1 componente) y la tabla de recetas. Atajos: **Ctrl+Shift+X** ocultar/mostrar, **Ctrl+Shift+Z** dejar pasar los clics al juego.
+
+Además: campeones con objetos ideales (BIS), tier list de objetos con recetas, emblemas y artefactos, y sinergias con el rendimiento de cada umbral (MetaTFT).
 
 ## Actualizaciones automáticas
 - **Datos y parches:** cada vez que sale un parche la app lo detecta (revisa cada hora) y descarga las builds, runas y tier lists nuevas sola.

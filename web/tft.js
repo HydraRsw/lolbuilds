@@ -131,7 +131,8 @@ function tftTip(kind, key) {
 function tftShell(active, inner) {
   const tabs = [['comps', 'Composiciones', '#/tft'], ['champs', 'Campeones', '#/tft/champs'], ['items', 'Objetos', '#/tft/items'], ['traits', 'Sinergias', '#/tft/traits']];
   return `<div class="tft-top"><h1>TFT${T.st ? ` <span class="dim">· Set ${T.st.set}</span>` : ''}</h1>
-    <div class="seg">${tabs.map(([k, l, h]) => `<button class="${k === active ? 'on' : ''}" onclick="go('${h}')">${l}</button>`).join('')}</div></div>${inner}`;
+    <div class="seg">${tabs.map(([k, l, h]) => `<button class="${k === active ? 'on' : ''}" onclick="go('${h}')">${l}</button>`).join('')}</div>
+    ${typeof toggleOverlay === 'function' ? `<button class="btn" style="margin-left:auto" onclick="toggleOverlay()" title="Ventana siempre visible encima del juego (TFT en modo sin bordes)">Abrir / cerrar overlay</button>` : ''}</div>${inner}`;
 }
 
 async function renderTFT(t, parts) {

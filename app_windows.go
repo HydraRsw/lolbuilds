@@ -14,6 +14,10 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 2 && os.Args[1] == "--overlay" {
+		runOverlay(os.Args[2])
+		return
+	}
 	base, _, err := startServer("127.0.0.1:0")
 	if err != nil {
 		msgBox("No se pudo iniciar el servidor local: " + err.Error())
@@ -46,6 +50,7 @@ func main() {
 	w.SetSize(1100, 700, webview2.HintMin)
 	w.Navigate(base)
 	w.Run()
+	overlays.close()
 }
 
 func msgBox(text string) {

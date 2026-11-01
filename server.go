@@ -243,12 +243,15 @@ func startServer(addr string) (string, *updater, error) {
 	mux.HandleFunc("/api/update/check", up.handleCheck)
 	mux.HandleFunc("/api/update/restart", up.handleRestart)
 	mux.HandleFunc("/api/open", handleOpen)
+	mux.HandleFunc("/api/overlay", overlays.handle)
+	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return "", nil, err
 	}
 	go func() { _ = http.Serve(ln, mux) }()
+	overlays.base = "http://" + ln.Addr().String() + "/"
 	up.start()
 	return "http://" + ln.Addr().String() + "/", up, nil
 }

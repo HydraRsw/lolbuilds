@@ -13,7 +13,7 @@ const wrClass = wr => wr >= 0.515 ? 'wr-good' : wr < 0.485 ? 'wr-bad' : '';
 /* ---------------- settings ---------------- */
 const REGIONS = [['global', 'Global (todas)'], ['kr', 'Corea'], ['euw', 'EU Oeste'], ['na', 'Norteamérica'], ['lan', 'LAN'], ['las', 'LAS'], ['br', 'Brasil'], ['eune', 'EU Nórdica/Este'], ['jp', 'Japón'], ['oce', 'Oceanía'], ['tr', 'Turquía'], ['vn', 'Vietnam']];
 const TIERS = [['all', 'Todos'], ['gold_plus', 'Oro+'], ['platinum_plus', 'Platino+'], ['emerald_plus', 'Esmeralda+'], ['diamond_plus', 'Diamante+'], ['master_plus', 'Maestro+'], ['challenger', 'Retador']];
-const settings = Object.assign({ region: 'global', tier: 'emerald_plus', autoOpen: true, autoRunes: false, autoItems: true, autoSpells: false },
+const settings = Object.assign({ region: 'global', tier: 'emerald_plus', autoOpen: true, autoRunes: false, autoItems: true, autoSpells: false, autoOverlay: true },
   (() => { try { return JSON.parse(localStorage.getItem('lb.settings') || '{}'); } catch { return {}; } })());
 const saveSettings = () => { try { localStorage.setItem('lb.settings', JSON.stringify(settings)); } catch { } };
 
@@ -834,14 +834,50 @@ async function autoImport(champId, mode, pos) {
   catch (e) { toast('No se pudo descargar la build de ' + c.name, true); return; }
   const ctx = { c, id: champId, mode, pos, d };
   const done = [];
-  for (const k of kinds) { try { done.push(await importOne(k, ctx, { rune: 0, build: 0 })); } catch { } }
-  if (done.length) toast(`Auto: ${done.join(', ')} de ${c.name} importados ✔`);
+  const failed = [];
+  for (const k of kinds) { try { done.push(await importOne(k, ctx, { rune: 0, build: 0 })); } catch (e) { failed.push(e.message); } }
+  if (done.length) toast(`Importado automáticamente para ${c.name}: ${done.join(', ')} ✔` + (failed.length ? ` · ${failed[0]}` : ''));
+  else if (failed.length) toast(`No se pudo importar para ${c.name}: ${failed[0]}`, true);
 }
 
 /* ---------------- League client (LCU) ---------------- */
 let lcuState = { connected: false };
 let lastAutoOpen = null, lastAutoImport = null;
-const QUEUE_MODE = q => [450, 2400, 2401, 2402].includes(q) ? 'aram' : [1700, 1710, 1720].includes(q) ? 'arena' : 'ranked';
+// Game mode from the client: map 12 = Howling Abyss (ARAM / ARAM Mayhem "KIWI"), CHERRY = Arena.
+function modeOf(s) {
+  const gm = String(s.gameMode || '').toUpperCase();
+  if (gm === 'TFT' || s.mapId === 22) return 'tft';
+  if (gm === 'CHERRY' || s.mapId === 30 || [1700, 1710, 1720].includes(s.queueId)) return 'arena';
+  if (s.mapId === 12 || gm === 'ARAM' || gm === 'KIWI' || [450, 2400, 2401, 2402].includes(s.queueId)) return 'aram';
+  return 'ranked';
+}
+let lockStable = { key: null, n: 0 };
+
+/* TFT overlay (separate always-on-top window) */
+let ovAutoOpened = false;
+async function overlayCall(action) {
+  const r = await fetch('/api/overlay?do=' + action);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'No se pudo abrir el overlay');
+  return j;
+}
+async function toggleOverlay() {
+  try {
+    const j = await overlayCall('toggle');
+    toast(j.running ? 'Overlay abierto · Ctrl+Shift+X lo oculta, Ctrl+Shift+Z deja pasar los clics' : 'Overlay cerrado');
+  } catch (e) { toast(e.message, true); }
+}
+function tftOverlayAuto(s) {
+  if (!settings.autoOverlay) return;
+  const inTft = s.connected && s.phase === 'InProgress' && modeOf(s) === 'tft';
+  if (inTft && !ovAutoOpened) {
+    ovAutoOpened = true;
+    overlayCall('open').then(() => toast('Partida de TFT detectada: overlay abierto (Ctrl+Shift+X para ocultarlo)')).catch(() => { });
+  } else if (!inTft && ovAutoOpened && s.phase !== 'Reconnect') {
+    ovAutoOpened = false;
+    overlayCall('close').catch(() => { });
+  }
+}
 const LCU_POS = { top: 'TOP', jungle: 'JUNGLE', middle: 'MID', bottom: 'ADC', utility: 'SUPPORT' };
 const PHASES = { None: 'En el cliente', Lobby: 'En sala', Matchmaking: 'Buscando partida', ReadyCheck: 'Partida encontrada', ChampSelect: 'Selección de campeón', InProgress: 'En partida', WaitingForStats: 'Fin de partida', EndOfGame: 'Fin de partida', PreEndOfGame: 'Fin de partida' };
 
@@ -858,7 +894,7 @@ async function pollLCU() {
     if (was !== s.connected && location.hash.startsWith('#/champ/')) route(); // show/hide import buttons
 
     if (s.phase === 'ChampSelect' && s.championId && settings.autoOpen) {
-      const mode = QUEUE_MODE(s.queueId);
+      const mode = modeOf(s);
       const pos = LCU_POS[s.position] || '';
       const key = `${s.championId}|${mode}|${pos}|${s.locked}`;
       if (key !== lastAutoOpen && S.byKey[s.championId]) {
@@ -867,10 +903,13 @@ async function pollLCU() {
       }
     }
     if (s.phase === 'ChampSelect' && s.locked && s.championId) {
-      const mode = QUEUE_MODE(s.queueId);
+      const mode = modeOf(s);
       const key = `${s.championId}|${mode}|${s.position}`;
-      if (key !== lastAutoImport) { lastAutoImport = key; autoImport(s.championId, mode, LCU_POS[s.position] || ''); }
+      // In ARAM you can swap from the bench, so wait until the champion stays the same for 2 polls.
+      lockStable = lockStable.key === key ? { key, n: lockStable.n + 1 } : { key, n: 1 };
+      if (key !== lastAutoImport && (mode !== 'aram' || lockStable.n >= 2)) { lastAutoImport = key; autoImport(s.championId, mode, LCU_POS[s.position] || ''); }
     }
+    tftOverlayAuto(s);
     if (s.phase !== 'ChampSelect') { lastAutoOpen = null; lastAutoImport = null; }
   } catch { }
   setTimeout(pollLCU, lcuState.phase === 'ChampSelect' ? 1500 : 3000);
@@ -883,7 +922,7 @@ function initSettings() {
   const m = $('#settingsModal');
   $('#settingsBtn').onclick = () => {
     $('#setRegion').value = settings.region; $('#setTier').value = settings.tier;
-    $('#setAutoOpen').checked = settings.autoOpen; $('#setAutoRunes').checked = settings.autoRunes; $('#setAutoItems').checked = settings.autoItems; $('#setAutoSpells').checked = settings.autoSpells;
+    $('#setAutoOpen').checked = settings.autoOpen; $('#setAutoRunes').checked = settings.autoRunes; $('#setAutoItems').checked = settings.autoItems; $('#setAutoSpells').checked = settings.autoSpells; $('#setAutoOverlay').checked = settings.autoOverlay;
     m.hidden = false;
     drawVersion();
   };
@@ -895,7 +934,7 @@ function initSettings() {
   const close = () => {
     const changed = settings.region !== $('#setRegion').value || settings.tier !== $('#setTier').value;
     settings.region = $('#setRegion').value; settings.tier = $('#setTier').value;
-    settings.autoOpen = $('#setAutoOpen').checked; settings.autoRunes = $('#setAutoRunes').checked; settings.autoItems = $('#setAutoItems').checked; settings.autoSpells = $('#setAutoSpells').checked;
+    settings.autoOpen = $('#setAutoOpen').checked; settings.autoRunes = $('#setAutoRunes').checked; settings.autoItems = $('#setAutoItems').checked; settings.autoSpells = $('#setAutoSpells').checked; settings.autoOverlay = $('#setAutoOverlay').checked;
     saveSettings(); m.hidden = true;
     if (changed) route();
   };

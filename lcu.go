@@ -108,6 +108,8 @@ type lcuState struct {
 	ChampionID int    `json:"championId"`
 	Locked     bool   `json:"locked"`
 	QueueID    int    `json:"queueId"`
+	GameMode   string `json:"gameMode"`
+	MapID      int    `json:"mapId"`
 	Position   string `json:"position"`
 }
 
@@ -121,14 +123,27 @@ func (l *lcu) handleState(w http.ResponseWriter, r *http.Request) {
 	st.Connected, st.Phase = true, phase
 
 	var flow struct {
+		Map struct {
+			ID       int    `json:"id"`
+			GameMode string `json:"gameMode"`
+		} `json:"map"`
 		GameData struct {
 			Queue struct {
-				ID int `json:"id"`
+				ID       int    `json:"id"`
+				GameMode string `json:"gameMode"`
+				MapID    int    `json:"mapId"`
 			} `json:"queue"`
 		} `json:"gameData"`
 	}
 	if _, err := l.do("GET", "/lol-gameflow/v1/session", nil, &flow); err == nil {
-		st.QueueID = flow.GameData.Queue.ID
+		q := flow.GameData.Queue
+		st.QueueID, st.GameMode, st.MapID = q.ID, q.GameMode, q.MapID
+		if st.GameMode == "" {
+			st.GameMode = flow.Map.GameMode
+		}
+		if st.MapID == 0 {
+			st.MapID = flow.Map.ID
+		}
 	}
 
 	if phase == "ChampSelect" {
@@ -140,6 +155,13 @@ func (l *lcu) handleState(w http.ResponseWriter, r *http.Request) {
 				ChampionPickIntent int    `json:"championPickIntent"`
 				AssignedPosition   string `json:"assignedPosition"`
 			} `json:"myTeam"`
+			Actions [][]struct {
+				ActorCellID  int    `json:"actorCellId"`
+				ChampionID   int    `json:"championId"`
+				Completed    bool   `json:"completed"`
+				IsInProgress bool   `json:"isInProgress"`
+				Type         string `json:"type"`
+			} `json:"actions"`
 		}
 		if _, err := l.do("GET", "/lol-champ-select/v1/session", nil, &sess); err == nil {
 			for _, m := range sess.MyTeam {
@@ -150,6 +172,24 @@ func (l *lcu) handleState(w http.ResponseWriter, r *http.Request) {
 					}
 					st.Position = m.AssignedPosition
 				}
+			}
+			// Draft/blind: "locked" means my pick action is completed.
+			// ARAM / ARAM Mayhem have no pick action: the champion is assigned,
+			// so it counts as locked as soon as I have one (bench swaps update it).
+			hasPick := false
+			for _, group := range sess.Actions {
+				for _, a := range group {
+					if a.ActorCellID != sess.LocalPlayerCellID || a.Type != "pick" {
+						continue
+					}
+					hasPick = true
+					if a.Completed && a.ChampionID > 0 {
+						st.Locked, st.ChampionID = true, a.ChampionID
+					}
+				}
+			}
+			if !hasPick && st.ChampionID > 0 {
+				st.Locked = true
 			}
 		}
 		var cur int
