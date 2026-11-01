@@ -15,7 +15,11 @@ import (
 
 func main() {
 	if len(os.Args) > 2 && os.Args[1] == "--overlay" {
-		runOverlay(os.Args[2])
+		kind := "comps"
+		if len(os.Args) > 3 {
+			kind = os.Args[3]
+		}
+		runOverlay(os.Args[2], kind)
 		return
 	}
 	base, _, err := startServer("127.0.0.1:0")

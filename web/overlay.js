@@ -1,22 +1,17 @@
 'use strict';
-/* TFT overlay: compact comps list, pinned comp, components → craftable items, recipe sheet. */
+/* TFT overlay — comps window: compact comps list with boards per stage and a pinned comp. */
 
 const OV = {
   tab: 'comps', tier: 'ALL', q: '', open: null, stage: {},
   pin: (() => { try { return localStorage.getItem('ov.pin'); } catch { return null; } })(),
-  have: (() => { try { return JSON.parse(localStorage.getItem('ov.have') || '{}'); } catch { return {}; } })(),
 };
-const ovSave = () => { try { localStorage.setItem('ov.pin', OV.pin || ''); localStorage.setItem('ov.have', JSON.stringify(OV.have)); } catch { } };
+const ovSave = () => {
+  try { localStorage.setItem('ov.pin', OV.pin || ''); } catch { }
+  fetch('/api/overlay/state?pin=' + encodeURIComponent(OV.pin || ''), { method: 'POST' }).catch(() => { });
+};
 const TIER_ORDER = { OP: 0, S: 1, A: 2, B: 3, C: 4, D: 5 };
 
 /* ---------- data helpers ---------- */
-function components() {
-  const all = T.st?.items || [];
-  const used = new Set(all.flatMap(i => i.composition || []));
-  return all.filter(i => used.has(i.apiName) && !(i.composition?.length) && !/tutorial/i.test(i.apiName));
-}
-function combos() { return (T.st?.items || []).filter(i => i.composition?.length === 2); }
-function recipeFor(a, b) { return combos().find(i => (i.composition[0] === a && i.composition[1] === b) || (i.composition[0] === b && i.composition[1] === a)); }
 function pinnedDeck() { return (T.comps || []).find(d => d.id === OV.pin); }
 function neededItems(d) {
   if (!d) return [];
@@ -77,65 +72,9 @@ function renderOvComps() {
 
 function ovOpenComp(id) { OV.open = OV.open === id ? null : id; renderOv(); }
 
-/* ---------- items tab ---------- */
-function renderOvItems() {
-  const comps = components();
-  const have = OV.have;
-  const pin = pinnedDeck();
-  const need = neededItems(pin);
-  const needSet = new Set(need.map(x => x.item));
-  // every distinct item buildable from two held components
-  const keys = Object.keys(have).filter(k => have[k] > 0);
-  const craft = new Map();
-  for (let i = 0; i < keys.length; i++) for (let j = i; j < keys.length; j++) {
-    if (i === j && have[keys[i]] < 2) continue;
-    const it = recipeFor(keys[i], keys[j]);
-    if (it && !craft.has(it.apiName)) craft.set(it.apiName, it);
-  }
-  const list = [...craft.values()].sort((a, b) => (needSet.has(b.apiName) - needSet.has(a.apiName)) || ((avgOf(a.apiName) ?? 9) - (avgOf(b.apiName) ?? 9)));
-  const users = k => (T.uip?.itemNames?.[k]?.units || []).slice(0, 4).map(x => x.unit);
-  // items of the pinned comp missing exactly one component
-  const almost = [];
-  for (const n of need) {
-    if (craft.has(n.item)) continue;
-    const comp = itemInfo(n.item).comp;
-    if (comp.length !== 2) continue;
-    const h = { ...have }; const missing = [];
-    for (const c of comp) { if (h[c] > 0) h[c]--; else missing.push(c); }
-    if (missing.length === 1 && !almost.some(a => a.item === n.item)) almost.push({ ...n, missing: missing[0] });
-  }
-  view.innerHTML = `
-    <div class="sec">Mis componentes <a id="ovClear">Limpiar</a></div>
-    <div class="comp-pick">${comps.map(c => `<div class="cp ${have[c.apiName] ? 'has' : ''}" data-c="${esc(c.apiName)}" title="Clic: +1 · Clic derecho: −1">${have[c.apiName] ? `<b>${have[c.apiName]}</b>` : ''}<img src="${c.icon}" alt=""><span>${esc(c.name)}</span></div>`).join('')}</div>
-    <p class="fine" style="margin:0 0 4px">Clic para sumar, clic derecho para restar.${pin ? ` Resaltados: objetos de tu compo fijada (${esc(deckName(pin))}).` : ' Fija una compo para resaltar sus objetos.'}</p>
-    <div class="sec">Puedes armar (${list.length})</div>
-    ${list.map(i => `<div class="craft ${needSet.has(i.apiName) ? 'need' : ''}">${tItemImg(i.apiName)}<div class="grow"><b>${esc(i.name)}${needSet.has(i.apiName) ? '<span class="tag">TU COMPO</span>' : ''}</b>
-      <small>${i.composition.map(c => esc(itemInfo(c).name)).join(' + ')}${avgOf(i.apiName) ? ` · prom. ${avgOf(i.apiName).toFixed(2)}` : ''}</small></div>
-      <div class="users">${users(i.apiName).map(u => tUnitImg(u, 'xs')).join('')}</div></div>`).join('') || '<p class="empty">Marca al menos dos componentes.</p>'}
-    ${almost.length ? `<div class="sec">Te falta 1 componente</div>${almost.map(a => `<div class="craft">${tItemImg(a.item)}<div class="grow"><b>${esc(itemInfo(a.item).name)}</b><small>para ${esc(unitInfo(a.unit).name)} · falta</small></div>${tItemImg(a.missing, 'ti sm')}</div>`).join('')}` : ''}`;
-  $$('.cp').forEach(el => {
-    el.onclick = () => { have[el.dataset.c] = (have[el.dataset.c] || 0) + 1; ovSave(); renderOvItems(); };
-    el.oncontextmenu = e => { e.preventDefault(); have[el.dataset.c] = Math.max(0, (have[el.dataset.c] || 0) - 1); ovSave(); renderOvItems(); };
-  });
-  $('#ovClear').onclick = () => { OV.have = {}; ovSave(); renderOvItems(); };
-}
-
-/* ---------- recipes tab ---------- */
-function renderOvRecipes() {
-  const base = components().slice(0, 10);
-  view.innerHTML = `<div class="sec">Tabla de recetas</div><div style="overflow-x:auto"><table class="recipes"><tr><th></th>${base.map(c => `<th>${tItemImg(c.apiName)}</th>`).join('')}</tr>
-    ${base.map(r => `<tr><th>${tItemImg(r.apiName)}</th>${base.map(c => { const it = recipeFor(r.apiName, c.apiName); return `<td>${it ? tItemImg(it.apiName) : ''}</td>`; }).join('')}</tr>`).join('')}</table></div>
-    <div class="sec">Mejores objetos</div>
-    ${combos().filter(i => avgOf(i.apiName)).sort((a, b) => avgOf(a.apiName) - avgOf(b.apiName)).slice(0, 12).map(i => `<div class="craft">${tItemImg(i.apiName)}<div class="grow"><b>${esc(i.name)}</b><small>prom. ${avgOf(i.apiName).toFixed(2)} · Top 4 ${pct(T.stats.items[i.apiName].top4, 0)}</small></div><span class="rec" style="display:flex;gap:2px">${i.composition.map(c => tItemImg(c, 'ti sm')).join('')}</span></div>`).join('')}`;
-}
-
 /* ---------- shell ---------- */
-function renderOv() {
-  if (OV.tab === 'items') return renderOvItems();
-  if (OV.tab === 'recipes') return renderOvRecipes();
-  return renderOvComps();
-}
-$('#ovTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; OV.tab = b.dataset.t; $$('#ovTabs button').forEach(x => x.classList.toggle('on', x === b)); window.scrollTo(0, 0); renderOv(); };
+function renderOv() { renderOvComps(); }
+window.ovGo = h => { if (h.startsWith('#/tft/comp/')) ovOpenComp(h.split('/').pop()); };
 view.addEventListener('click', async e => {
   const st = e.target.closest('[data-stage]');
   if (st) { const id = st.closest('.oc').dataset.id; OV.stage[id] = +st.dataset.stage; renderOv(); return; }
@@ -154,7 +93,7 @@ view.addEventListener('click', async e => {
     await Promise.all([tftLoadStatic().catch(() => { }), tftLoadComps()]);
   } catch (e) { view.innerHTML = errorBox(e); return; }
   renderOv();
-  tftLoadStats().then(() => { if (OV.tab !== 'comps') renderOv(); }).catch(() => { });
+  ovSave(); // share the pinned comp with the recipe bar
   // pick up new comps (OP.GG refresh) every 30 min without reopening the overlay
   setInterval(async () => { tftCompsP = null; try { await tftLoadComps(); if (OV.tab === 'comps' && !document.activeElement?.matches('input')) renderOv(); } catch { } }, 30 * 60 * 1000);
 })();

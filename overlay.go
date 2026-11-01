@@ -8,27 +8,39 @@ import (
 	"sync"
 )
 
-// overlayMgr runs the TFT overlay as a second process of this same .exe
-// ("LoLBuilds.exe --overlay <url>"), an always-on-top window that loads
-// overlay.html from this server, so it shares data, cache and UI updates.
-type overlayMgr struct {
-	mu   sync.Mutex
-	base string
-	cmd  *exec.Cmd
+// The TFT overlay is two always-on-top windows, each a separate process of this
+// same .exe ("LoLBuilds.exe --overlay <url> <kind>"): the comps panel and the
+// horizontal recipe bar. They load their pages from this server (sharing data,
+// cache and UI updates) and poll /api/overlay/state, which the global hotkeys
+// registered here change.
+var overlayKinds = map[string]string{"comps": "overlay.html", "recipes": "overlay-recipes.html"}
+
+type overlayState struct {
+	V         int  `json:"v"`
+	Visible   bool `json:"visible"`
+	ClickThru bool   `json:"clickThru"`
+	Pin       string `json:"pin"` // comp pinned in the comps window (highlighted in the recipe bar)
 }
+
+type overlayMgr struct {
+	mu       sync.Mutex
+	base     string
+	cmds     map[string]*exec.Cmd
+	state    overlayState
+	stopKeys func()
+}
+
+func (o *overlayMgr) runningLocked() bool { return len(o.cmds) > 0 }
 
 func (o *overlayMgr) running() bool {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	return o.cmd != nil
+	return o.runningLocked()
 }
 
 func (o *overlayMgr) open() error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	if o.cmd != nil {
-		return nil
-	}
 	if !overlaySupported {
 		return errOverlayUnsupported
 	}
@@ -36,29 +48,66 @@ func (o *overlayMgr) open() error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(exe, "--overlay", o.base+"overlay.html")
-	if err := cmd.Start(); err != nil {
-		return err
+	if o.cmds == nil {
+		o.cmds = map[string]*exec.Cmd{}
 	}
-	o.cmd = cmd
-	go func() {
-		_ = cmd.Wait()
-		o.mu.Lock()
-		if o.cmd == cmd {
-			o.cmd = nil
+	if !o.runningLocked() {
+		o.state = overlayState{V: o.state.V + 1, Visible: true, Pin: o.state.Pin}
+	}
+	for kind, page := range overlayKinds {
+		if o.cmds[kind] != nil {
+			continue
 		}
-		o.mu.Unlock()
-	}()
+		cmd := exec.Command(exe, "--overlay", o.base+page, kind)
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		o.cmds[kind] = cmd
+		go func(kind string, cmd *exec.Cmd) {
+			_ = cmd.Wait()
+			o.mu.Lock()
+			if o.cmds[kind] == cmd {
+				delete(o.cmds, kind)
+			}
+			if !o.runningLocked() && o.stopKeys != nil {
+				o.stopKeys()
+				o.stopKeys = nil
+			}
+			o.mu.Unlock()
+		}(kind, cmd)
+	}
+	if o.stopKeys == nil {
+		o.stopKeys = startHotkeys(o.hotkey)
+	}
 	return nil
+}
+
+func (o *overlayMgr) hotkey(id int) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	switch id {
+	case 1:
+		o.state.Visible = !o.state.Visible
+	case 2:
+		o.state.ClickThru = !o.state.ClickThru
+		o.state.Visible = true
+	}
+	o.state.V++
 }
 
 func (o *overlayMgr) close() {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	if o.cmd != nil && o.cmd.Process != nil {
-		_ = o.cmd.Process.Kill()
+	for k, cmd := range o.cmds {
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+		}
+		delete(o.cmds, k)
 	}
-	o.cmd = nil
+	if o.stopKeys != nil {
+		o.stopKeys()
+		o.stopKeys = nil
+	}
 }
 
 func (o *overlayMgr) handle(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +128,16 @@ func (o *overlayMgr) handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, 200, map[string]any{"running": o.running(), "supported": overlaySupported})
+}
+
+func (o *overlayMgr) handleState(w http.ResponseWriter, r *http.Request) {
+	o.mu.Lock()
+	if r.Method == http.MethodPost {
+		o.state.Pin = r.URL.Query().Get("pin")
+	}
+	s := o.state
+	o.mu.Unlock()
+	writeJSON(w, 200, s)
 }
 
 var overlays = &overlayMgr{}

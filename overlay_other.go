@@ -4,4 +4,6 @@ package main
 
 const overlaySupported = false
 
-func runOverlay(url string) {}
+func runOverlay(url, kind string) {}
+
+func startHotkeys(cb func(id int)) func() { return func() {} }
