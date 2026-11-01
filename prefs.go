@@ -1,0 +1,51 @@
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
+)
+
+// prefs holds settings that every window of the app must share (the main
+// window and the two overlay processes have separate browser storage).
+type prefs struct {
+	Lang string `json:"lang,omitempty"` // "es" | "en"; empty = follow Windows
+}
+
+var (
+	prefsMu sync.Mutex
+	prefsV  prefs
+	prefsOK bool
+)
+
+func prefsPath() string { return filepath.Join(dataDir(), "prefs.json") }
+
+func loadPrefs() prefs {
+	prefsMu.Lock()
+	defer prefsMu.Unlock()
+	if !prefsOK {
+		if b, err := os.ReadFile(prefsPath()); err == nil {
+			_ = json.Unmarshal(b, &prefsV)
+		}
+		prefsOK = true
+	}
+	return prefsV
+}
+
+func handlePrefs(w http.ResponseWriter, r *http.Request) {
+	p := loadPrefs()
+	if r.Method == http.MethodPost {
+		if l := r.URL.Query().Get("lang"); l == "es" || l == "en" {
+			p.Lang = l
+			prefsMu.Lock()
+			prefsV = p
+			_ = os.MkdirAll(dataDir(), 0o755)
+			b, _ := json.Marshal(p)
+			_ = os.WriteFile(prefsPath(), b, 0o644)
+			prefsMu.Unlock()
+		}
+	}
+	writeJSON(w, 200, p)
+}

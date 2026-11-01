@@ -28,28 +28,28 @@ function compCard(d) {
   let body = '';
   if (open) {
     const stages = [];
-    if (d.early?.units?.length) stages.push(['early', `Inicio · ${d.early.level}`, d.early.units]);
-    if (d.middle?.units?.length) stages.push(['mid', `Medio · ${d.middle.level}`, d.middle.units]);
-    stages.push(['final', 'Final', d.units]);
+    if (d.early?.units?.length) stages.push(['early', `${LANG === 'en' ? 'Early' : 'Inicio'} · ${d.early.level}`, d.early.units]);
+    if (d.middle?.units?.length) stages.push(['mid', `${L('Medio')} · ${d.middle.level}`, d.middle.units]);
+    stages.push(['final', L('Final'), d.units]);
     const cur = OV.stage[d.id] ?? stages.length - 1;
     const st = stages[Math.min(cur, stages.length - 1)];
     const carries = d.units.filter(u => u.isCore).sort((a, b) => (a.priority ?? 9) - (b.priority ?? 9));
     const comp = {};
     for (const n of neededItems(d)) for (const c of itemInfo(n.item).comp) comp[c] = (comp[c] || 0) + 1;
     body = `<div class="oc-b">
-      <h5>Tablero</h5>
+      <h5>${L('Tablero')}</h5>
       <div class="stg">${stages.map((x, i) => `<button data-stage="${i}" class="${i === cur ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
       <div class="mini-board">${board(st[2], { items: st[0] === 'final', deck: d.id })}</div>
-      <h5>Objetos de los carries</h5>
+      <h5>${L('Objetos de los carries')}</h5>
       ${carries.map(u => `<div class="ci">${tUnitImg(u.key, 'xs', d.id)}<b style="font-size:12px">${esc(unitInfo(u.key).name)}</b><span class="rec">${u.items.map(it => tItemImg(it)).join('')}</span></div>`).join('')}
-      ${Object.keys(comp).length ? `<h5>Componentes</h5><div class="comp-needed">${Object.entries(comp).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span>${tItemImg(c, 'ti sm')}<b>×${n}</b></span>`).join('')}</div>` : ''}
-      <div class="oc-actions"><button class="btn sm ${pinned ? 'ghost' : ''}" data-pin="${esc(d.id)}">${pinned ? 'Quitar fijado' : '📌 Fijar esta compo'}</button>
-      ${d.teamCode ? `<button class="btn ghost sm" data-code="${esc(d.teamCode)}">Copiar código</button>` : ''}</div>
+      ${Object.keys(comp).length ? `<h5>${L('Componentes')}</h5><div class="comp-needed">${Object.entries(comp).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span>${tItemImg(c, 'ti sm')}<b>×${n}</b></span>`).join('')}</div>` : ''}
+      <div class="oc-actions"><button class="btn sm ${pinned ? 'ghost' : ''}" data-pin="${esc(d.id)}">${L(pinned ? 'Quitar fijado' : '📌 Fijar esta compo')}</button>
+      ${d.teamCode ? `<button class="btn ghost sm" data-code="${esc(d.teamCode)}">${L('Copiar código')}</button>` : ''}</div>
     </div>`;
   }
   return `<div class="oc ${pinned ? 'pinned' : ''}" data-id="${esc(d.id)}">
     <div class="oc-h"><span class="tier ${TIER_CLS(d.stat?.opTier)}">${esc(d.stat?.opTier || '?')}</span><span class="nm">${pinned ? '📌 ' : ''}${esc(deckName(d))}</span>
-      <span class="st"><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b> prom · <b>${pct(s.top4Rate, 0)}</b> top4</span></div>
+      <span class="st"><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b> ${L('prom')} · <b>${pct(s.top4Rate, 0)}</b> top4</span></div>
     <div class="oc-u">${units.map(u => tUnit(u.key, { stars: u.tier, items: u.items, carry: u.isCore, name: false, deck: d.id })).join('')}</div>
     ${body}</div>`;
 }
@@ -59,8 +59,8 @@ function renderOvTools() {
   const t = $('#ovTools');
   if (!t || t.dataset.ready) return;
   t.dataset.ready = 1;
-  t.innerHTML = `<div class="ov-tools"><input id="ovq" placeholder="Buscar campeón o sinergia…" value="${esc(OV.q)}"></div>
-    <div class="chips" id="ovTier">${['ALL', 'OP', 'S', 'A', 'B', 'C'].map(x => `<button data-t="${x}" class="${OV.tier === x ? 'on' : ''}">${x === 'ALL' ? 'Todas' : x}</button>`).join('')}</div>`;
+  t.innerHTML = `<div class="ov-tools"><input id="ovq" placeholder="${L('Buscar campeón o sinergia…')}" value="${esc(OV.q)}"></div>
+    <div class="chips" id="ovTier">${['ALL', 'OP', 'S', 'A', 'B', 'C'].map(x => `<button data-t="${x}" class="${OV.tier === x ? 'on' : ''}">${x === 'ALL' ? L('Todas') : x}</button>`).join('')}</div>`;
   $('#ovq').oninput = e => { OV.q = e.target.value; view.scrollTop = 0; renderOvComps(); };
   $('#ovTier').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -77,7 +77,7 @@ function renderOvComps() {
   if (n) list = list.filter(d => norm(deckName(d)).includes(n) || d.units.some(u => norm(unitInfo(u.key).name).includes(n)) || (d.traits || []).some(x => x.style > 0 && norm(traitInfo(x.key, x.meta?.name).name).includes(n)));
   list.sort((a, b) => (TIER_ORDER[a.stat?.opTier] ?? 9) - (TIER_ORDER[b.stat?.opTier] ?? 9) || (a.stat?.deck?.avgPlacement || 9) - (b.stat?.deck?.avgPlacement || 9));
   const pin = pinnedDeck();
-  view.innerHTML = `${pin ? compCard(pin) : ''}${list.map(compCard).join('') || '<p class="empty">Sin resultados.</p>'}`;
+  view.innerHTML = `${pin ? compCard(pin) : ''}${list.map(compCard).join('') || `<p class="empty">${L('Sin resultados.')}</p>`}`;
   requestAnimationFrame(ovFit);
 }
 

@@ -15,7 +15,7 @@ async function tftJSON(path, fresh) {
 }
 let tftStaticP = null, tftCompsP = null, tftStatsP = null;
 function tftLoadStatic() {
-  return tftStaticP ??= tftJSON('/api/tft/static', Date.now() < S.freshUntil).then(st => {
+  return tftStaticP ??= tftJSON('/api/tft/static?lang=' + DATA_LOC.cd, Date.now() < S.freshUntil).then(st => {
     T.st = st;
     for (const c of st.champions) { T.champ[c.apiName] = c; T.champByName[c.name] = c; }
     for (const t of st.traits) { T.trait[t.apiName] = t; T.traitByName[t.name] = t; }
@@ -112,9 +112,9 @@ function traitChip(t) {
   const info = traitInfo(t.key, t.meta?.name);
   return `<span class="tchip ${STYLE_CLS[t.style] || 'off'}" data-tip="tft-trait:${t.key}"><img src="${info.icon || t.meta?.imageUrl || ''}" data-fb="${t.meta?.imageUrl || ''}" alt="">${t.numUnits > 0 ? `<b>${t.numUnits}</b>` : ''}<span>${esc(info.name)}</span></span>`;
 }
-const deckName = d => d.name?.es_MX || d.name?.es_ES || d.name?.en_US || (typeof d.name === 'string' ? d.name : 'Composición');
+const deckName = d => (LANG === 'en' ? d.name?.en_US : (d.name?.es_MX || d.name?.es_ES)) || d.name?.en_US || (typeof d.name === 'string' ? d.name : L('Composición'));
 const badgeVal = (d, k) => (d.badge || []).find(b => b.key === k)?.value;
-const DIFF = { 1: ['Fácil', 'easy'], 2: ['Media', 'mid'], 3: ['Difícil', 'hard'] };
+const DIFF = { 1: [L('Fácil'), 'easy'], 2: [L('Media'), 'mid'], 3: [L('Difícil'), 'hard'] };
 const TIER_CLS = t => ({ OP: 't-OP', S: 't-S', A: 't-A', B: 't-B', C: 't-C', D: 't-D' }[t] || 't-C');
 
 /* desc cleanup: CommunityDragon text has @Var@ placeholders and %i:icon% tokens */
@@ -161,17 +161,17 @@ function tftTip(kind, key) {
     const alts = [...new Set([...bis.slice(3), ...metaItems])].filter(k => !best.includes(k) && !inComp.includes(k)).slice(0, 5);
     const row = list => `<div class="tt-items">${list.map(k => `<span><img src="${itemInfo(k).icon}" data-fb="${itemInfo(k).fb}" alt=""><small>${esc(itemInfo(k).name)}</small></span>`).join('')}</div>`;
     const compact = document.body.classList.contains('ovl');
-    return `<b>${esc(u.name)}</b><span class="g">Costo ${u.cost}${u.traits.length ? ' · ' + esc(u.traits.join(', ')) : ''}${compact && st ? ` · prom. ${st.avg.toFixed(2)}` : ''}</span>
-      ${inComp.length ? `<div class="tt-h">En esta compo</div>${row(inComp)}` : ''}
-      ${best.length ? `<div class="tt-h">Objetos ideales (BIS)</div>${row(best)}` : '<p>Sin datos de objetos para esta unidad.</p>'}
-      ${alts.length ? `<div class="tt-h">Alternativas</div><div class="tt-alts">${alts.map(k => `<img src="${itemInfo(k).icon}" data-fb="${itemInfo(k).fb}" alt="" title="${esc(itemInfo(k).name)}">`).join('')}</div>` : ''}
-      ${st && !compact ? `<p>Prom. ${st.avg.toFixed(2)} · Top 4 ${pct(st.top4)}</p>` : ''}
+    return `<b>${esc(u.name)}</b><span class="g">${L('Costo {n}', { n: u.cost })}${u.traits.length ? ' · ' + esc(u.traits.join(', ')) : ''}${compact && st ? ` · ${L('prom.')} ${st.avg.toFixed(2)}` : ''}</span>
+      ${inComp.length ? `<div class="tt-h">${L('En esta compo')}</div>${row(inComp)}` : ''}
+      ${best.length ? `<div class="tt-h">${L('Objetos ideales (BIS)')}</div>${row(best)}` : `<p>${L('Sin datos de objetos para esta unidad.')}</p>`}
+      ${alts.length ? `<div class="tt-h">${L('Alternativas')}</div><div class="tt-alts">${alts.map(k => `<img src="${itemInfo(k).icon}" data-fb="${itemInfo(k).fb}" alt="" title="${esc(itemInfo(k).name)}">`).join('')}</div>` : ''}
+      ${st && !compact ? `<p>${L('Prom.')} ${st.avg.toFixed(2)} · Top 4 ${pct(st.top4)}</p>` : ''}
       ${c?.ability && !compact ? `<p class="tt-abil"><i>${esc(c.ability.name)}</i>: ${tftDesc(c.ability.desc, c.ability.vars).slice(0, 260)}</p>` : ''}`;
   }
   if (kind === 'item') {
     const i = itemInfo(key), raw = T.item[key], st = T.stats?.items?.[key];
-    const recipe = i.comp.length ? `<p>Receta: ${i.comp.map(c => esc(itemInfo(c).name)).join(' + ')}</p>` : '';
-    return `<b>${esc(i.name)}</b>${recipe}${raw?.desc ? `<p>${tftDesc(raw.desc, raw.effects)}</p>` : ''}${st ? `<p>Prom. ${st.avg.toFixed(2)} · Top 4 ${pct(st.top4)}</p>` : ''}`;
+    const recipe = i.comp.length ? `<p>${L('Receta: {r}', { r: i.comp.map(c => esc(itemInfo(c).name)).join(' + ') })}</p>` : '';
+    return `<b>${esc(i.name)}</b>${recipe}${raw?.desc ? `<p>${tftDesc(raw.desc, raw.effects)}</p>` : ''}${st ? `<p>${L('Prom.')} ${st.avg.toFixed(2)} · Top 4 ${pct(st.top4)}</p>` : ''}`;
   }
   if (kind === 'trait') {
     const t = T.trait[key], info = traitInfo(key);
@@ -183,10 +183,10 @@ function tftTip(kind, key) {
 
 /* ---------- page shell ---------- */
 function tftShell(active, inner) {
-  const tabs = [['comps', 'Composiciones', '#/tft'], ['champs', 'Campeones', '#/tft/champs'], ['items', 'Objetos', '#/tft/items'], ['traits', 'Sinergias', '#/tft/traits']];
+  const tabs = [['comps', L('Composiciones'), '#/tft'], ['champs', L('Campeones'), '#/tft/champs'], ['items', L('Objetos'), '#/tft/items'], ['traits', L('Sinergias'), '#/tft/traits']];
   return `<div class="tft-top"><h1>TFT${T.st ? ` <span class="dim">· Set ${T.st.set}</span>` : ''}</h1>
     <div class="seg">${tabs.map(([k, l, h]) => `<button class="${k === active ? 'on' : ''}" onclick="go('${h}')">${l}</button>`).join('')}</div>
-    ${typeof toggleOverlay === 'function' ? `<button class="btn" style="margin-left:auto" onclick="toggleOverlay()" title="Ventana siempre visible encima del juego (TFT en modo sin bordes)">Abrir / cerrar overlay</button>` : ''}</div>${inner}`;
+    ${typeof toggleOverlay === 'function' ? `<button class="btn" style="margin-left:auto" onclick="toggleOverlay()" title="${L('Ventana siempre visible encima del juego (TFT en modo sin bordes)')}">${L('Abrir / cerrar overlay')}</button>` : ''}</div>${inner}`;
 }
 
 async function renderTFT(t, parts) {
@@ -212,10 +212,10 @@ async function renderComps(t) {
   const tiers = ['ALL', 'OP', 'S', 'A', 'B', 'C', 'D'];
   view.innerHTML = tftShell('comps', `
     <div class="grid-tools">
-      <div class="seg" id="ctier">${tiers.map(x => `<button data-t="${x}" class="${compState.tier === x ? 'on' : ''}">${x === 'ALL' ? 'Todas' : x}</button>`).join('')}</div>
-      <input id="cq" placeholder="Filtrar por campeón o sinergia…" value="${esc(compState.q)}">
-      <select id="csort" class="sel"><option value="tier">Orden: Tier</option><option value="top4">Top 4 %</option><option value="avg">Posición promedio</option><option value="pick">Popularidad</option></select>
-      <span class="muted" style="margin-left:auto;font-size:12.5px">${decks.length} composiciones · OP.GG</span>
+      <div class="seg" id="ctier">${tiers.map(x => `<button data-t="${x}" class="${compState.tier === x ? 'on' : ''}">${x === 'ALL' ? L('Todas') : x}</button>`).join('')}</div>
+      <input id="cq" placeholder="${L('Filtrar por campeón o sinergia…')}" value="${esc(compState.q)}">
+      <select id="csort" class="sel"><option value="tier">${L('Orden: Tier')}</option><option value="top4">Top 4 %</option><option value="avg">${L('Posición promedio')}</option><option value="pick">${L('Popularidad')}</option></select>
+      <span class="muted" style="margin-left:auto;font-size:12.5px">${L('{n} composiciones · OP.GG', { n: decks.length })}</span>
     </div>
     <div id="clist"></div>`);
   $('#csort').value = compState.sort;
@@ -240,12 +240,12 @@ async function renderComps(t) {
           <div class="cunits">${units.map(u => tUnit(u.key, { stars: u.tier, items: u.items, carry: u.isCore, deck: d.id })).join('')}</div>
         </div>
         <div class="cstats">
-          <div><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b><span>Prom.</span></div>
+          <div><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b><span>${L('Prom.')}</span></div>
           <div><b class="${s.top4Rate >= .6 ? 'wr-good' : ''}">${pct(s.top4Rate)}</b><span>Top 4</span></div>
-          <div><b>${pct(s.winRate)}</b><span>Victoria</span></div>
-          <div><b>${pct(s.pickRate, 2)}</b><span>Uso</span></div>
+          <div><b>${pct(s.winRate)}</b><span>${L('Victoria')}</span></div>
+          <div><b>${pct(s.pickRate, 2)}</b><span>${L('Uso')}</span></div>
         </div></div>`;
-    }).join('') || `<div class="card muted">No hay composiciones con ese filtro.</div>`;
+    }).join('') || `<div class="card muted">${L('No hay composiciones con ese filtro.')}</div>`;
   };
   $('#ctier').onclick = e => { const b = e.target.closest('button'); if (!b) return; compState.tier = b.dataset.t; $$('#ctier button').forEach(x => x.classList.toggle('on', x === b)); draw(); };
   $('#cq').oninput = e => { compState.q = e.target.value; draw(); };
@@ -257,8 +257,8 @@ async function renderComps(t) {
 function playStyle(d) {
   const r = badgeVal(d, 'reroll');
   const threes = d.units.filter(u => u.tier >= 3);
-  if (threes.length && r && r <= 7) return `Reroll nivel ${r}`;
-  if (r) return `Rolear en nivel ${r}`;
+  if (threes.length && r && r <= 7) return L('Reroll nivel {n}', { n: r });
+  if (r) return L('Rolear en nivel {n}', { n: r });
   return '';
 }
 
@@ -290,9 +290,9 @@ async function renderComp(t, id) {
   if (!d) { view.innerHTML = tftShell('comps', errorBox('Composición no encontrada (puede que el meta haya cambiado).')); return; }
   const s = d.stat?.deck || {}, diff = DIFF[badgeVal(d, 'difficulty')];
   const stages = [];
-  if (d.early?.units?.length) stages.push({ k: 'early', l: 'Inicio', lvl: d.early.level, units: d.early.units, traits: d.early.traits, st: d.early });
-  if (d.middle?.units?.length) stages.push({ k: 'mid', l: 'Medio', lvl: d.middle.level, units: d.middle.units, traits: d.middle.traits, st: d.middle });
-  stages.push({ k: 'final', l: 'Final', lvl: Math.max(d.units.length, 8), units: d.units, traits: d.traits, st: null });
+  if (d.early?.units?.length) stages.push({ k: 'early', l: LANG === 'en' ? 'Early' : 'Inicio', lvl: d.early.level, units: d.early.units, traits: d.early.traits, st: d.early });
+  if (d.middle?.units?.length) stages.push({ k: 'mid', l: L('Medio'), lvl: d.middle.level, units: d.middle.units, traits: d.middle.traits, st: d.middle });
+  stages.push({ k: 'final', l: L('Final'), lvl: Math.max(d.units.length, 8), units: d.units, traits: d.traits, st: null });
   let cur = stages.length - 1;
   const keyOf = u => u.key || u.characterId;
 
@@ -311,15 +311,15 @@ async function renderComp(t, id) {
     $('#stageBody').innerHTML = `
       <div class="stage-grid">
         <div>${board(sg.units, { items: sg.k === 'final', deck: d.id })}
-          ${roundWr != null ? `<p class="muted" style="font-size:12.5px;margin:10px 0 0">Este tablero gana el <b class="${roundWr >= .5 ? 'wr-good' : ''}">${pct(roundWr)}</b> de las rondas (${fmt(sg.st.play)} partidas).</p>` : ''}
+          ${roundWr != null ? `<p class="muted" style="font-size:12.5px;margin:10px 0 0">${L('Este tablero gana el <b class="{cls}">{wr}</b> de las rondas ({n} partidas).', { cls: roundWr >= .5 ? 'wr-good' : '', wr: pct(roundWr), n: fmt(sg.st.play) })}</p>` : ''}
         </div>
         <div class="stage-side">
-          <h4>Sinergias activas</h4>
+          <h4>${L('Sinergias activas')}</h4>
           <div class="ctraits">${(sg.traits || []).filter(x => x.style > 0).sort((a, b) => b.style - a.style).map(traitChip).join('') || '<span class="muted">—</span>'}</div>
-          ${prev ? `<h4>Qué cambiar desde «${prev.l}»</h4>
-            ${added.length ? `<div class="chg add"><span>Agregar</span><div>${added.map(k => tUnit(k, { name: true, deck: d.id })).join('')}</div></div>` : ''}
-            ${removed.length ? `<div class="chg rem"><span>Quitar</span><div>${removed.map(k => tUnit(k, { name: true })).join('')}</div></div>` : ''}
-            ${!added.length && !removed.length ? '<p class="muted">Mismas unidades; mejora estrellas y posiciones.</p>' : ''}` : `<h4>Unidades</h4><div class="cunits">${sg.units.map(u => tUnit(keyOf(u))).join('')}</div>`}
+          ${prev ? `<h4>${L('Qué cambiar desde «{s}»', { s: prev.l })}</h4>
+            ${added.length ? `<div class="chg add"><span>${L('Agregar')}</span><div>${added.map(k => tUnit(k, { name: true, deck: d.id })).join('')}</div></div>` : ''}
+            ${removed.length ? `<div class="chg rem"><span>${L('Quitar')}</span><div>${removed.map(k => tUnit(k, { name: true })).join('')}</div></div>` : ''}
+            ${!added.length && !removed.length ? `<p class="muted">${L('Mismas unidades; mejora estrellas y posiciones.')}</p>` : ''}` : `<h4>${L('Unidades')}</h4><div class="cunits">${sg.units.map(u => tUnit(keyOf(u))).join('')}</div>`}
         </div>
       </div>`;
     $$('#stageTabs button').forEach((b, i) => b.classList.toggle('on', i === cur));
@@ -330,36 +330,36 @@ async function renderComp(t, id) {
       <span class="tier big ${TIER_CLS(d.stat?.opTier)}">${esc(d.stat?.opTier || '?')}</span>
       <div style="flex:1;min-width:0">
         <h2>${esc(deckName(d))}</h2>
-        <div class="row-chips">${diff ? `<span class="diff ${diff[1]}">Dificultad: ${diff[0]}</span>` : ''}${playStyle(d) ? `<span class="pill">${esc(playStyle(d))}</span>` : ''}<span class="pill">${d.cost ? `Costo total ${d.cost} de oro` : ''}</span></div>
+        <div class="row-chips">${diff ? `<span class="diff ${diff[1]}">${L('Dificultad: {d}', { d: diff[0] })}</span>` : ''}${playStyle(d) ? `<span class="pill">${esc(playStyle(d))}</span>` : ''}<span class="pill">${d.cost ? L('Costo total {n} de oro', { n: d.cost }) : ''}</span></div>
       </div>
       <div class="cstats">
-        <div><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b><span>Prom.</span></div>
+        <div><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b><span>${L('Prom.')}</span></div>
         <div><b>${pct(s.top4Rate)}</b><span>Top 4</span></div>
-        <div><b>${pct(s.winRate)}</b><span>Victoria</span></div>
-        <div><b>${fmt(s.compsCount)}</b><span>Partidas</span></div>
+        <div><b>${pct(s.winRate)}</b><span>${L('Victoria')}</span></div>
+        <div><b>${fmt(s.compsCount)}</b><span>${L('Partidas')}</span></div>
       </div>
-      ${d.teamCode ? `<button class="btn" id="copyCode" title="Pégalo en el Planificador de equipo dentro de TFT">Copiar código de equipo</button>` : ''}
+      ${d.teamCode ? `<button class="btn" id="copyCode" title="${L('Pégalo en el Planificador de equipo dentro de TFT')}">${L('Copiar código de equipo')}</button>` : ''}
     </div>
     <div class="card" style="margin-bottom:14px">
-      <h3>Tableros por etapa <small>posicionamiento recomendado</small></h3>
-      ${d._boardsFrom || d._autoPos ? `<p class="fine" style="margin:-4px 0 12px">OP.GG no publica tableros para esta compo: ${d._boardsFrom ? `inicio y medio tomados de la compo similar «${esc(d._boardsFrom)}»` : ''}${d._boardsFrom && d._autoPos ? '; ' : ''}${d._autoPos ? 'la posición final es aproximada (tanques adelante, carries atrás)' : ''}.</p>` : ''}
-      <div class="seg" id="stageTabs" style="margin-bottom:14px">${stages.map((g, i) => `<button data-i="${i}">${g.l} · Nivel ${g.lvl}</button>`).join('')}</div>
+      <h3>${L('Tableros por etapa')} <small>${L('posicionamiento recomendado')}</small></h3>
+      ${d._boardsFrom || d._autoPos ? `<p class="fine" style="margin:-4px 0 12px">${L('OP.GG no publica tableros para esta compo: ')}${d._boardsFrom ? L('inicio y medio tomados de la compo similar «{name}»', { name: esc(d._boardsFrom) }) : ''}${d._boardsFrom && d._autoPos ? '; ' : ''}${d._autoPos ? L('la posición final es aproximada (tanques adelante, carries atrás)') : ''}.</p>` : ''}
+      <div class="seg" id="stageTabs" style="margin-bottom:14px">${stages.map((g, i) => `<button data-i="${i}">${g.l} · ${L('Nivel')} ${g.lvl}</button>`).join('')}</div>
       <div id="stageBody"></div>
     </div>
     <div class="two">
-      <div class="card"><h3>Carries y objetos</h3>
+      <div class="card"><h3>${L('Carries y objetos')}</h3>
         ${carries.map((u, i) => `<div class="carry-row"><span class="prio">${i + 1}</span>${tUnit(u.key, { stars: u.tier, name: true, deck: d.id })}<div class="its">${u.items.map(it => `${tItemImg(it, 'ti')}`).join('')}</div>
           <div class="alt">${bisFor(u.key, u.items).map(it => tItemImg(it, 'ti sm')).join('')}</div></div>`).join('')}
         ${holders.map(u => `<div class="carry-row tank"><span class="prio">·</span>${tUnit(u.key, { stars: u.tier, name: true, deck: d.id })}<div class="its">${u.items.map(it => tItemImg(it, 'ti')).join('')}</div><div class="alt"></div></div>`).join('')}
-        ${compList.length ? `<h4 class="sub">Componentes a priorizar</h4><div class="comp-needed">${compList.map(([c, n]) => `<span>${tItemImg(c, 'ti sm')}<b>×${n}</b></span>`).join('')}</div>` : ''}
-        <p class="fine">A la derecha: alternativas con mejores resultados según MetaTFT.</p>
+        ${compList.length ? `<h4 class="sub">${L('Componentes a priorizar')}</h4><div class="comp-needed">${compList.map(([c, n]) => `<span>${tItemImg(c, 'ti sm')}<b>×${n}</b></span>`).join('')}</div>` : ''}
+        <p class="fine">${L('A la derecha: alternativas con mejores resultados según MetaTFT.')}</p>
       </div>
-      <div class="card"><h3>Cómo jugarla</h3>${gamePlan(d, stages, carries, compList)}</div>
+      <div class="card"><h3>${L('Cómo jugarla')}</h3>${gamePlan(d, stages, carries, compList)}</div>
     </div>`);
   $('#stageTabs').onclick = e => { const b = e.target.closest('button'); if (b) { cur = +b.dataset.i; draw(); } };
   $('#copyCode')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(d.teamCode); toast('Código copiado: pégalo en el Planificador de equipo de TFT ✔'); }
-    catch { prompt('Copia este código:', d.teamCode); }
+    catch { prompt(L('Copia este código:'), d.teamCode); }
   });
   draw();
   tftLoadStats().then(() => { if (stale(t)) return; $$('.carry-row .alt').forEach((el, i) => { const u = carries[i]; if (u) el.innerHTML = bisFor(u.key, u.items).map(it => tItemImg(it, 'ti sm')).join(''); }); });
@@ -379,18 +379,32 @@ function gamePlan(d, stages, carries, compList) {
   const bigCarries = carries.filter(u => unitInfo(u.key).cost >= 4).map(u => u.key);
   const active = trs => (trs || []).filter(x => x.style > 0).sort((a, b) => b.style - a.style).slice(0, 3).map(x => `${esc(traitInfo(x.key, x.meta?.name).name)} ${x.numUnits}`).join(', ');
   const steps = [];
-  if (early) steps.push(['Etapa 2 · Inicio', `Juega <b>${early.units.map(u => name(keyOf(u))).join(', ')}</b> (nivel ${early.lvl})${active(early.traits) ? `, activando ${active(early.traits)}` : ''}. ${compList.length ? `Busca en el carrusel y en los monstruos estos componentes: <b>${compList.slice(0, 4).map(([c]) => esc(itemInfo(c).name)).join(', ')}</b>.` : ''} Si te llegan los objetos del carry, póntelos a la unidad más fuerte del tablero y pásalos luego.`]);
+  const lst = arr => arr.join(', ');
+  if (early) steps.push([L('Etapa 2 · Inicio'), L('Juega <b>{units}</b> (nivel {lvl}){traits}. {comps}Si te llegan los objetos del carry, póntelos a la unidad más fuerte del tablero y pásalos luego.', {
+    units: lst(early.units.map(u => name(keyOf(u)))), lvl: early.lvl,
+    traits: active(early.traits) ? L(', activando {t}', { t: active(early.traits) }) : '',
+    comps: compList.length ? L('Busca en el carrusel y en los monstruos estos componentes: <b>{c}</b>. ', { c: lst(compList.slice(0, 4).map(([c]) => esc(itemInfo(c).name))) }) : '',
+  })]);
   if (mid) {
     const pk = new Set((early?.units || []).map(keyOf));
     const add = mid.units.map(keyOf).filter(k => !pk.has(k));
-    steps.push(['Etapa 3 · Medio', `Sube a nivel ${mid.lvl} y transiciona${add.length ? ` agregando <b>${add.map(name).join(', ')}</b>` : ''}${active(mid.traits) ? `. Objetivo: ${active(mid.traits)}` : ''}. Mantén la economía por encima de 30–50 de oro si tu vida lo permite.`]);
+    steps.push([L('Etapa 3 · Medio'), L('Sube a nivel {lvl} y transiciona{add}{goal}. Mantén la economía por encima de 30–50 de oro si tu vida lo permite.', {
+      lvl: mid.lvl, add: add.length ? L(' agregando <b>{u}</b>', { u: lst(add.map(name)) }) : '',
+      goal: active(mid.traits) ? L('. Objetivo: {t}', { t: active(mid.traits) }) : '',
+    })]);
   }
-  if (threes.length && r && r <= 7) steps.push(['Etapa 3–4 · Reroll', `Quédate en nivel ${r} y rolea poco a poco (por encima de 50 de oro) hasta conseguir <b>${threes.map(name).join(', ')}</b> a 3★. Después sube de nivel para completar el tablero.`]);
-  else if (r) steps.push(['Etapa 4 · Roll down', `Sube a nivel ${r} en 4-1 o 4-2 y rolea para encontrar ${bigCarries.length ? `<b>${bigCarries.map(name).join(', ')}</b>` : 'tus carries principales'} a 2★.${threes.length ? ` Mantén las copias para tener <b>${threes.map(name).join(', ')}</b> a 3★.` : ''}`]);
-  steps.push(['Final', `Tablero completo (${fin.units.length} unidades): <b>${active(fin.traits) || '—'}</b>. ${carries.length ? `Carries en orden de prioridad: ${carries.map(u => name(u.key)).join(' › ')}.` : ''} Revisa la pestaña «Final» para el posicionamiento exacto: tanques al frente, carries atrás.`]);
+  if (threes.length && r && r <= 7) steps.push([L('Etapa 3–4 · Reroll'), L('Quédate en nivel {r} y rolea poco a poco (por encima de 50 de oro) hasta conseguir <b>{u}</b> a 3★. Después sube de nivel para completar el tablero.', { r, u: lst(threes.map(name)) })]);
+  else if (r) steps.push([L('Etapa 4 · Roll down'), L('Sube a nivel {r} en 4-1 o 4-2 y rolea para encontrar {who} a 2★.{keep}', {
+    r, who: bigCarries.length ? `<b>${lst(bigCarries.map(name))}</b>` : L('tus carries principales'),
+    keep: threes.length ? L(' Mantén las copias para tener <b>{u}</b> a 3★.', { u: lst(threes.map(name)) }) : '',
+  })]);
+  steps.push([L('Final'), L('Tablero completo ({n} unidades): <b>{t}</b>. {carries}Revisa la pestaña «Final» para el posicionamiento exacto: tanques al frente, carries atrás.', {
+    n: fin.units.length, t: active(fin.traits) || '—',
+    carries: carries.length ? L('Carries en orden de prioridad: {c}. ', { c: carries.map(u => name(u.key)).join(' › ') }) : '',
+  })]);
   const diff = badgeVal(d, 'difficulty');
-  if (diff === 3) steps.push(['Consejo', 'Composición difícil: necesita conseguir unidades caras o mucha precisión con objetos. Si en la etapa 3 no tienes los componentes, cambia a una alternativa.']);
-  if (diff === 1) steps.push(['Consejo', 'Composición fácil de ejecutar: buena para subir de forma estable.']);
+  if (diff === 3) steps.push([L('Consejo'), L('Composición difícil: necesita conseguir unidades caras o mucha precisión con objetos. Si en la etapa 3 no tienes los componentes, cambia a una alternativa.')]);
+  if (diff === 1) steps.push([L('Consejo'), L('Composición fácil de ejecutar: buena para subir de forma estable.')]);
   return `<ol class="plan">${steps.map(([h, p]) => `<li><b>${h}</b><p>${p}</p></li>`).join('')}</ol>`;
 }
 
@@ -401,8 +415,8 @@ async function renderTChamps(t) {
   if (stale(t)) return;
   const champs = T.st?.champions || [];
   if (!champs.length) { view.innerHTML = tftShell('champs', errorBox('No se pudieron cargar los campeones de TFT.')); return; }
-  view.innerHTML = tftShell('champs', `<div class="grid-tools"><input id="tcq" placeholder="Buscar campeón…">
-    <div class="seg" id="tcs"><button data-s="cost" class="${tChampSort === 'cost' ? 'on' : ''}">Por costo</button><button data-s="avg" class="${tChampSort === 'avg' ? 'on' : ''}">Mejores (prom.)</button></div></div><div id="tcgrid"></div>`);
+  view.innerHTML = tftShell('champs', `<div class="grid-tools"><input id="tcq" placeholder="${L('Buscar campeón…')}">
+    <div class="seg" id="tcs"><button data-s="cost" class="${tChampSort === 'cost' ? 'on' : ''}">${L('Por costo')}</button><button data-s="avg" class="${tChampSort === 'avg' ? 'on' : ''}">${L('Mejores (prom.)')}</button></div></div><div id="tcgrid"></div>`);
   let q = '';
   const draw = () => {
     const n = norm(q);
@@ -412,7 +426,7 @@ async function renderTChamps(t) {
       const sorted = [...list].filter(c => st(c.apiName)).sort((a, b) => st(a.apiName).avg - st(b.apiName).avg);
       $('#tcgrid').innerHTML = `<div class="tc-grid">${sorted.map(c => champCard(c)).join('')}</div>`;
     } else {
-      $('#tcgrid').innerHTML = [1, 2, 3, 4, 5, 6, 7].map(cost => { const g = list.filter(c => c.cost === cost); return g.length ? `<h3 class="cost-h ${COST_CLS(cost)}">Costo ${cost}</h3><div class="tc-grid">${g.map(c => champCard(c)).join('')}</div>` : ''; }).join('');
+      $('#tcgrid').innerHTML = [1, 2, 3, 4, 5, 6, 7].map(cost => { const g = list.filter(c => c.cost === cost); return g.length ? `<h3 class="cost-h ${COST_CLS(cost)}">${L('Costo {n}', { n: cost })}</h3><div class="tc-grid">${g.map(c => champCard(c)).join('')}</div>` : ''; }).join('');
     }
   };
   $('#tcq').oninput = e => { q = e.target.value; draw(); };
@@ -423,7 +437,7 @@ function champCard(c) {
   const st = T.stats?.units?.[c.apiName];
   const bis = (T.uip?.units?.[c.apiName]?.items || []).slice(0, 3).map(x => x.itemName);
   return `<a class="tc-card" href="#/tft/champ/${encodeURIComponent(c.apiName)}">${tUnitImg(c.apiName)}<div class="tc-t"><b>${esc(c.name)}</b><small>${esc(c.traits.join(' · '))}</small>
-    ${st ? `<small>Prom. <b class="${st.avg < 4.3 ? 'wr-good' : st.avg > 4.6 ? 'wr-bad' : ''}">${st.avg.toFixed(2)}</b> · Top 4 ${pct(st.top4, 0)}</small>` : ''}</div>
+    ${st ? `<small>${L('Prom.')} <b class="${st.avg < 4.3 ? 'wr-good' : st.avg > 4.6 ? 'wr-bad' : ''}">${st.avg.toFixed(2)}</b> · Top 4 ${pct(st.top4, 0)}</small>` : ''}</div>
     <div class="tc-bis">${bis.map(i => tItemImg(i, 'ti xs')).join('')}</div></a>`;
 }
 
@@ -444,21 +458,21 @@ async function renderTChamp(t, key) {
   view.innerHTML = tftShell('champs', `
     <div class="comp-head card">
       <img class="tu-img big ${COST_CLS(u.cost)}" src="${u.icon || ph(u.name)}" data-fb="${u.fb}" alt="">
-      <div style="flex:1"><h2>${esc(u.name)} <span class="pill">Costo ${u.cost}</span></h2>
+      <div style="flex:1"><h2>${esc(u.name)} <span class="pill">${L('Costo {n}', { n: u.cost })}</span></h2>
         <div class="ctraits">${traitKeys.map(k => traitChip({ key: k, style: 1, numUnits: 0 })).join('')}</div></div>
-      ${st ? `<div class="cstats"><div><b>${st.avg.toFixed(2)}</b><span>Prom.</span></div><div><b>${pct(st.top4)}</b><span>Top 4</span></div><div><b>${pct(st.win)}</b><span>Victoria</span></div><div><b>${fmt(st.games)}</b><span>Partidas</span></div></div>` : ''}
+      ${st ? `<div class="cstats"><div><b>${st.avg.toFixed(2)}</b><span>${L('Prom.')}</span></div><div><b>${pct(st.top4)}</b><span>Top 4</span></div><div><b>${pct(st.win)}</b><span>${L('Victoria')}</span></div><div><b>${fmt(st.games)}</b><span>${L('Partidas')}</span></div></div>` : ''}
     </div>
     <div class="two">
       <div class="stack">
-        <div class="card"><h3>Objetos ideales (BIS)</h3>
+        <div class="card"><h3>${L('Objetos ideales (BIS)')}</h3>
           ${bisAll.length ? `<div class="bis-main">${bisAll.slice(0, 3).map(i => `<div>${tItemImg(i, 'ti lg')}<span>${esc(itemInfo(i).name)}</span></div>`).join('')}</div>
-          <h4 class="sub">Alternativas</h4><div class="situ">${bisAll.slice(3, 10).map(i => tItemImg(i, 'ti')).join('')}</div>` : deckItems.length ? `<div class="bis-main">${deckItems.slice(0, 3).map(i => `<div>${tItemImg(i, 'ti lg')}<span>${esc(itemInfo(i).name)}</span></div>`).join('')}</div>` : '<p class="muted">Sin datos de objetos para esta unidad.</p>'}
-          ${deckItems.length && bisAll.length ? `<h4 class="sub">Usados en composiciones meta</h4><div class="situ">${deckItems.slice(0, 8).map(i => tItemImg(i, 'ti')).join('')}</div>` : ''}
+          <h4 class="sub">${L('Alternativas')}</h4><div class="situ">${bisAll.slice(3, 10).map(i => tItemImg(i, 'ti')).join('')}</div>` : deckItems.length ? `<div class="bis-main">${deckItems.slice(0, 3).map(i => `<div>${tItemImg(i, 'ti lg')}<span>${esc(itemInfo(i).name)}</span></div>`).join('')}</div>` : '<p class="muted">Sin datos de objetos para esta unidad.</p>'}
+          ${deckItems.length && bisAll.length ? `<h4 class="sub">${L('Usados en composiciones meta')}</h4><div class="situ">${deckItems.slice(0, 8).map(i => tItemImg(i, 'ti')).join('')}</div>` : ''}
         </div>
-        ${c?.ability ? `<div class="card"><h3>${esc(c.ability.name)} <small>habilidad</small></h3><p class="abil-desc">${tftDesc(c.ability.desc, c.ability.vars)}</p></div>` : ''}
+        ${c?.ability ? `<div class="card"><h3>${esc(c.ability.name)} <small>${L('habilidad')}</small></h3><p class="abil-desc">${tftDesc(c.ability.desc, c.ability.vars)}</p></div>` : ''}
       </div>
-      <div class="card"><h3>Composiciones con ${esc(u.name)}</h3>
-        ${decks.slice(0, 8).map(d => `<a class="mini-comp" href="#/tft/comp/${esc(d.id)}"><span class="tier ${TIER_CLS(d.stat?.opTier)}">${esc(d.stat?.opTier)}</span><span class="nm">${esc(deckName(d))}${d.units.find(x => x.key === key)?.isCore ? ' <span class="pill">Carry</span>' : ''}</span><span class="muted">${d.stat?.deck?.avgPlacement?.toFixed(2) ?? ''}</span></a>`).join('') || '<p class="muted">No aparece en las composiciones meta actuales.</p>'}
+      <div class="card"><h3>${L('Composiciones con {name}', { name: esc(u.name) })}</h3>
+        ${decks.slice(0, 8).map(d => `<a class="mini-comp" href="#/tft/comp/${esc(d.id)}"><span class="tier ${TIER_CLS(d.stat?.opTier)}">${esc(d.stat?.opTier)}</span><span class="nm">${esc(deckName(d))}${d.units.find(x => x.key === key)?.isCore ? ' <span class="pill">Carry</span>' : ''}</span><span class="muted">${d.stat?.deck?.avgPlacement?.toFixed(2) ?? ''}</span></a>`).join('') || `<p class="muted">${L('No aparece en las composiciones meta actuales.')}</p>`}
       </div>
     </div>`);
 }
@@ -478,8 +492,8 @@ async function renderTItems(t) {
   };
   const users = k => (T.uip?.itemNames?.[k]?.units || []).slice(0, 4).map(x => x.unit);
   view.innerHTML = tftShell('items', `
-    <div class="grid-tools"><div class="seg" id="titab">${[['combined', 'Combinados'], ['emblems', 'Emblemas'], ['other', 'Artefactos y otros'], ['recipes', 'Recetas']].map(([k, l]) => `<button data-k="${k}" class="${tItemTab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <span class="muted" style="font-size:12.5px">Posición promedio y Top 4 de los últimos 3 días (MetaTFT)</span></div><div id="tibody"></div>`);
+    <div class="grid-tools"><div class="seg" id="titab">${[['combined', L('Combinados')], ['emblems', L('Emblemas')], ['other', L('Artefactos y otros')], ['recipes', L('Recetas')]].map(([k, l]) => `<button data-k="${k}" class="${tItemTab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <span class="muted" style="font-size:12.5px">${L('Posición promedio y Top 4 de los últimos 3 días (MetaTFT)')}</span></div><div id="tibody"></div>`);
   const draw = () => {
     if (tItemTab === 'recipes') {
       const base = comps.filter(c => all.some(i => i.composition?.includes(c.apiName))).slice(0, 10);
@@ -496,8 +510,8 @@ async function renderTItems(t) {
     const grade = (s, i, n) => !s ? '' : i < n * 0.15 ? 'S' : i < n * 0.4 ? 'A' : i < n * 0.7 ? 'B' : 'C';
     const ranked = [...list].filter(i => st(i.apiName)).sort((a, b) => st(a.apiName).avg - st(b.apiName).avg);
     const rankOf = k => ranked.findIndex(i => i.apiName === k);
-    $('#tibody').innerHTML = `<table class="tl"><thead><tr><th>Objeto</th><th>Tier</th>${tItemTab === 'combined' ? '<th>Receta</th>' : ''}
-      <th class="num" data-s="avg">Prom. ${tItemSort === 'avg' ? '▲' : ''}</th><th class="num" data-s="top4">Top 4 ${tItemSort === 'top4' ? '▼' : ''}</th><th class="num" data-s="games">Partidas ${tItemSort === 'games' ? '▼' : ''}</th><th>Mejor en</th></tr></thead>
+    $('#tibody').innerHTML = `<table class="tl"><thead><tr><th>${L('Objeto')}</th><th>Tier</th>${tItemTab === 'combined' ? `<th>${L('Receta')}</th>` : ''}
+      <th class="num" data-s="avg">${L('Prom.')} ${tItemSort === 'avg' ? '▲' : ''}</th><th class="num" data-s="top4">Top 4 ${tItemSort === 'top4' ? '▼' : ''}</th><th class="num" data-s="games">${L('Partidas')} ${tItemSort === 'games' ? '▼' : ''}</th><th>${L('Mejor en')}</th></tr></thead>
       <tbody>${list.map(i => { const s = st(i.apiName), g = grade(s, rankOf(i.apiName), ranked.length); return `<tr class="norow">
         <td><div class="champ-cell">${tItemImg(i.apiName, 'ti')}${esc(i.name)}</div></td>
         <td>${g ? `<span class="tier t-${g}">${g}</span>` : ''}</td>
@@ -520,7 +534,7 @@ async function renderTTraits(t) {
   const list = [...traits].sort((a, b) => best(a) - best(b));
   view.innerHTML = tftShell('traits', `<div class="trait-list">${list.map(tr => {
     const ch = champsOf(tr);
-    return `<div class="card trait-card"><div class="tr-head"><img src="${tr.icon}" alt=""><div><b>${esc(tr.name)}</b><div class="bps">${tr.effects.map((e, i) => { const s = T.stats?.traits?.[`${tr.apiName}_${i + 1}`]; return `<span class="bp ${STYLE_CLS[Math.min(e.style, 5)] || 'bronze'}" data-tip="text:${encodeURIComponent(s ? `${e.minUnits} unidades: prom. ${s.avg.toFixed(2)} · Top 4 ${pct(s.top4)}` : e.minUnits + ' unidades')}">${e.minUnits}${s ? `<small>${s.avg.toFixed(2)}</small>` : ''}</span>`; }).join('')}</div></div></div>
+    return `<div class="card trait-card"><div class="tr-head"><img src="${tr.icon}" alt=""><div><b>${esc(tr.name)}</b><div class="bps">${tr.effects.map((e, i) => { const s = T.stats?.traits?.[`${tr.apiName}_${i + 1}`]; return `<span class="bp ${STYLE_CLS[Math.min(e.style, 5)] || 'bronze'}" data-tip="text:${encodeURIComponent(s ? `${L('{n} unidades', { n: e.minUnits })}: ${L('prom.')} ${s.avg.toFixed(2)} · Top 4 ${pct(s.top4)}` : L('{n} unidades', { n: e.minUnits }))}">${e.minUnits}${s ? `<small>${s.avg.toFixed(2)}</small>` : ''}</span>`; }).join('')}</div></div></div>
       <p class="tr-desc">${traitDesc(tr)}</p>
       <div class="cunits">${ch.map(c => tUnit(c.apiName)).join('')}</div></div>`;
   }).join('')}</div>`);

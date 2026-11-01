@@ -20,17 +20,17 @@ function infoHTML(key) {
   const users = (T.uip?.itemNames?.[key]?.units || []).slice(0, 4).map(x => x.unit);
   const cs = compsUsing(key).slice(0, 2);
   return `<b>${esc(it.name)}</b>
-    ${st ? `<span class="k">prom. <b>${st.avg.toFixed(2)}</b> · top 4 ${pct(st.top4, 0)}</span>` : ''}
-    ${users.length ? `<span class="k">mejor en</span><span class="us">${users.map(u => tUnitImg(u, 'xs')).join('')}</span>` : ''}
-    ${cs.length ? `<span class="cmp">· compos: ${cs.map(d => `<em>${esc(deckName(d))}</em>`).join(', ')}</span>` : ''}`;
+    ${st ? `<span class="k">${L('prom.')} <b>${st.avg.toFixed(2)}</b> · top 4 ${pct(st.top4, 0)}</span>` : ''}
+    ${users.length ? `<span class="k">${L('mejor en')}</span><span class="us">${users.map(u => tUnitImg(u, 'xs')).join('')}</span>` : ''}
+    ${cs.length ? `<span class="cmp">· ${L('compos')}: ${cs.map(d => `<em>${esc(deckName(d))}</em>`).join(', ')}</span>` : ''}`;
 }
 
 function render() {
   const comps = components();
-  if (!comps.length) { wrap.innerHTML = '<div style="padding:12px 16px" class="muted">Sin datos de objetos.</div>'; return fit(); }
+  if (!comps.length) { wrap.innerHTML = `<div style="padding:12px 16px" class="muted">${L('Sin datos de objetos.')}</div>`; return fit(); }
   const pin = pinnedComp();
   const need = new Set(pin ? pin.units.flatMap(u => u.items || []) : []);
-  let html = `<div class="rbar"><div class="grip" onmousedown="ovDragStart(event)" title="Arrastra para mover">⠿</div>
+  let html = `<div class="rbar"><div class="grip" onmousedown="ovDragStart(event)" title="${L('Arrastra para mover')}">⠿</div>
     ${comps.map(c => `<div class="cell ${RB.sel === c.apiName ? 'on' : ''}" data-c="${esc(c.apiName)}" title="${esc(c.name)}"><img src="${c.icon}" alt="${esc(c.name)}"></div>`).join('')}</div>`;
   if (RB.sel) {
     const rows = comps.map(k => ({ k, it: recipeFor(RB.sel, k.apiName) })).filter(x => x.it);

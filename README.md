@@ -1,6 +1,6 @@
 # LoL Builds
 
-App de escritorio para Windows con builds, runas, orden de habilidades, tier list y aumentos (ARAM Mayhem y Arena) de League of Legends, al estilo OP.GG / Blitz.
+App de escritorio para Windows (en **español e inglés**) con builds, runas, orden de habilidades, tier list y aumentos (ARAM Mayhem y Arena) de League of Legends, al estilo OP.GG / Blitz.
 
 ## Descarga
 [LoLBuilds.exe](https://github.com/HydraRsw/lolbuilds/raw/updates/LoLBuilds.exe) — después se actualiza sola.
@@ -15,7 +15,7 @@ App de escritorio para Windows con builds, runas, orden de habilidades, tier lis
    - **Importar runas** reemplaza tu página actual (o la que creó la app, con prefijo «LB»).
    - **Aplicar** hechizos de invocador.
    - **Importar al cliente** crea un set de objetos que aparece en la tienda del juego.
-4. Ajustes (engranaje): región, rango, auto-abrir, importación automática, versión y «Buscar actualizaciones».
+4. Ajustes (engranaje): idioma (español / English), región, rango, auto-abrir, importación automática, versión y «Buscar actualizaciones».
 
 Windows mostrará un aviso de SmartScreen la primera vez porque el exe no está firmado: «Más información» → «Ejecutar de todas formas».
 
@@ -54,3 +54,15 @@ GOPROXY=direct GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H windows
 `LOLB_DEBUG=1` habilita las herramientas de desarrollo dentro de la ventana.
 
 App no oficial, no respaldada por Riot Games.
+
+---
+
+## English
+
+LoL Builds is a Windows desktop app (Spanish and English) with League of Legends builds, runes, skill order, augments (ARAM Mayhem and Arena) and tier lists in an OP.GG/Blitz-style layout, plus a TFT section with meta comps, boards by stage, items, traits and an in-game overlay.
+
+- **Download:** [LoLBuilds.exe](https://github.com/HydraRsw/lolbuilds/raw/updates/LoLBuilds.exe). No install needed, and it updates itself.
+- **Language:** follows your Windows language. Change it in Settings → Language. The game data (champion, item, rune and TFT names) switches language too.
+- **League client:** detects champ select, opens your champion, and imports runes, item sets and summoner spells (automatically when you lock in, if enabled).
+- **TFT overlay:** two always-on-top windows (TFT in borderless mode): a comps panel and a horizontal recipe bar. **Ctrl+Shift+X** hides them and **Ctrl+Shift+Z** lets clicks pass through to the game.
+- Unofficial app, not endorsed by Riot Games.

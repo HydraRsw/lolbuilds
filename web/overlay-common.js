@@ -4,7 +4,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pct = (x, d = 1) => (x == null || isNaN(x)) ? '—' : (x * 100).toFixed(d) + '%';
-const fmt = n => n == null ? '—' : Number(n).toLocaleString('es');
+const fmt = n => n == null ? '—' : Number(n).toLocaleString(DATA_LOC.num);
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const S = { freshUntil: 0 };
 const memo = new Map();
@@ -27,11 +27,11 @@ const view = document.getElementById('ov');
 const ovDragStart = e => { if (e.button === 0 && !e.target.closest('button,input,a') && window.ovDrag) ovDrag(); };
 let routeToken = 0;
 const stale = () => false;
-const loadingHTML = (m = 'Cargando…') => `<div class="inline-load"><div class="spinner"></div>${esc(m)}</div>`;
+const loadingHTML = (m = 'Cargando…') => `<div class="inline-load"><div class="spinner"></div>${esc(L(m))}</div>`;
 const errorBox = e => `<div class="error-box">${esc(e?.message || e)}</div>`;
 const go = h => { if (window.ovGo) ovGo(h); };
 let toastT;
-function toast(msg, err) { const t = $('#toast'); if (!t) return; t.textContent = msg; t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast', 2500); }
+function toast(msg, err) { const t = $('#toast'); if (!t) return; t.textContent = L(String(msg)); t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast', 2500); }
 const tip = $('#tooltip');
 if (tip) document.addEventListener('mouseover', e => {
   const t = e.target.closest('[data-tip]');

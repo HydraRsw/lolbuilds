@@ -243,6 +243,7 @@ func startServer(addr string) (string, *updater, error) {
 	mux.HandleFunc("/api/update/check", up.handleCheck)
 	mux.HandleFunc("/api/update/restart", up.handleRestart)
 	mux.HandleFunc("/api/open", handleOpen)
+	mux.HandleFunc("/api/prefs", handlePrefs)
 	mux.HandleFunc("/api/overlay", overlays.handle)
 	mux.HandleFunc("/api/overlay/state", overlays.handleState)
 	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })

@@ -20,7 +20,7 @@ type tftService struct{ p *proxy }
 const (
 	opggCompsURL = "https://op.gg/tft/meta-trends/comps"
 	opggMCPURL   = "https://mcp-api.op.gg/mcp"
-	cdragonTFT   = "https://raw.communitydragon.org/latest/cdragon/tft/es_mx.json"
+	cdragonTFT   = "https://raw.communitydragon.org/latest/cdragon/tft/" // + es_mx.json / en_us.json
 	cdragonGame  = "https://raw.communitydragon.org/latest/game/"
 )
 
@@ -213,8 +213,13 @@ func slimDeck(d map[string]any) {
 
 func (t *tftService) handleStatic(w http.ResponseWriter, r *http.Request) {
 	force := r.URL.Query().Get("fresh") == "1"
-	b, err := t.p.cached("tft:static:v1", 12*time.Hour, force, true, func() ([]byte, error) {
-		raw, err := t.p.cached(cdragonTFT, 12*time.Hour, force, false, func() ([]byte, error) { return t.p.download(cdragonTFT, nil) })
+	lang := r.URL.Query().Get("lang")
+	if lang != "en_us" {
+		lang = "es_mx"
+	}
+	src := cdragonTFT + lang + ".json"
+	b, err := t.p.cached("tft:static:v1:"+lang, 12*time.Hour, force, true, func() ([]byte, error) {
+		raw, err := t.p.cached(src, 12*time.Hour, force, false, func() ([]byte, error) { return t.p.download(src, nil) })
 		if err != nil {
 			return nil, err
 		}

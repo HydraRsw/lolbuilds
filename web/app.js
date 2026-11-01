@@ -7,12 +7,12 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const stripTags = s => String(s || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n{2,}/g, '\n').trim();
 const pct = (x, d = 1) => (x == null || isNaN(x)) ? '—' : (x * 100).toFixed(d) + '%';
-const fmt = n => n == null ? '—' : Number(n).toLocaleString('es');
+const fmt = n => n == null ? '—' : Number(n).toLocaleString(DATA_LOC.num);
 const wrClass = wr => wr >= 0.515 ? 'wr-good' : wr < 0.485 ? 'wr-bad' : '';
 
 /* ---------------- settings ---------------- */
-const REGIONS = [['global', 'Global (todas)'], ['kr', 'Corea'], ['euw', 'EU Oeste'], ['na', 'Norteamérica'], ['lan', 'LAN'], ['las', 'LAS'], ['br', 'Brasil'], ['eune', 'EU Nórdica/Este'], ['jp', 'Japón'], ['oce', 'Oceanía'], ['tr', 'Turquía'], ['vn', 'Vietnam']];
-const TIERS = [['all', 'Todos'], ['gold_plus', 'Oro+'], ['platinum_plus', 'Platino+'], ['emerald_plus', 'Esmeralda+'], ['diamond_plus', 'Diamante+'], ['master_plus', 'Maestro+'], ['challenger', 'Retador']];
+const REGIONS = [['global', L('Global (todas)')], ['kr', L('Corea')], ['euw', L('EU Oeste')], ['na', L('Norteamérica')], ['lan', 'LAN'], ['las', 'LAS'], ['br', L('Brasil')], ['eune', L('EU Nórdica/Este')], ['jp', L('Japón')], ['oce', L('Oceanía')], ['tr', L('Turquía')], ['vn', 'Vietnam']];
+const TIERS = [['all', L('Todos')], ['gold_plus', L('Oro+')], ['platinum_plus', L('Platino+')], ['emerald_plus', L('Esmeralda+')], ['diamond_plus', L('Diamante+')], ['master_plus', L('Maestro+')], ['challenger', L('Retador')]];
 const settings = Object.assign({ region: 'global', tier: 'emerald_plus', autoOpen: true, autoRunes: false, autoItems: true, autoSpells: false, autoOverlay: true },
   (() => { try { return JSON.parse(localStorage.getItem('lb.settings') || '{}'); } catch { return {}; } })());
 const saveSettings = () => { try { localStorage.setItem('lb.settings', JSON.stringify(settings)); } catch { } };
@@ -26,7 +26,7 @@ async function api(url, opts = {}) {
   if (!opts.fresh && memo.has(url)) return memo.get(url);
   const p = fetch('/p?u=' + encodeURIComponent(url) + (opts.fresh ? '&fresh=1' : '')).then(async r => {
     const txt = await r.text();
-    let j; try { j = JSON.parse(txt); } catch { throw new Error('Respuesta inválida'); }
+    let j; try { j = JSON.parse(txt); } catch { throw new Error(L('Respuesta inválida')); }
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     return j;
   });
@@ -50,49 +50,49 @@ const img = {
 };
 
 const ROLES = [
-  { op: 'TOP', name: 'Superior', ic: 'top', lcu: 'top' },
-  { op: 'JUNGLE', name: 'Jungla', ic: 'jungle', lcu: 'jungle' },
-  { op: 'MID', name: 'Central', ic: 'middle', lcu: 'middle' },
-  { op: 'ADC', name: 'Tirador', ic: 'bottom', lcu: 'bottom' },
-  { op: 'SUPPORT', name: 'Soporte', ic: 'utility', lcu: 'utility' },
+  { op: 'TOP', name: L('Superior'), ic: 'top', lcu: 'top' },
+  { op: 'JUNGLE', name: L('Jungla'), ic: 'jungle', lcu: 'jungle' },
+  { op: 'MID', name: L('Central'), ic: 'middle', lcu: 'middle' },
+  { op: 'ADC', name: L('Tirador'), ic: 'bottom', lcu: 'bottom' },
+  { op: 'SUPPORT', name: L('Soporte'), ic: 'utility', lcu: 'utility' },
 ];
 const roleOf = op => ROLES.find(r => r.op === op) || ROLES[0];
 const TIER_LBL = { 0: 'OP', 1: 'S', 2: 'A', 3: 'B', 4: 'C', 5: 'D' };
 const tierBadge = t => t == null ? '' : `<span class="tier t-${TIER_LBL[t] ?? 'C'}">${TIER_LBL[t] ?? t}</span>`;
-const MODES = { ranked: 'Clasificatoria', aram: 'ARAM Mayhem', arena: 'Arena' };
+const MODES = { ranked: L('Clasificatoria'), aram: 'ARAM Mayhem', arena: 'Arena' };
 
-const SHARD_FALLBACK = { 5008: 'Fuerza adaptable', 5005: 'Velocidad de ataque', 5007: 'Aceleración de habilidades', 5010: 'Velocidad de movimiento', 5001: 'Vida escalable', 5011: 'Vida', 5013: 'Tenacidad y resist. a ralentización', 5002: 'Armadura', 5003: 'Resistencia mágica' };
+const SHARD_FALLBACK = { 5008: L('Fuerza adaptable'), 5005: L('Velocidad de ataque'), 5007: L('Aceleración de habilidades'), 5010: L('Velocidad de movimiento'), 5001: L('Vida escalable'), 5011: L('Vida'), 5013: L('Tenacidad y resist. a ralentización'), 5002: L('Armadura'), 5003: L('Resistencia mágica') };
 
 async function loadStatic(fresh = false) {
   const versions = await api('https://ddragon.leagueoflegends.com/api/versions.json', { fresh });
   S.v = versions[0];
   const [champ, items, runes, spells] = await Promise.all([
-    api(`${DD()}/data/es_MX/champion.json`),
-    api(`${DD()}/data/es_MX/item.json`),
-    api(`${DD()}/data/es_MX/runesReforged.json`),
-    api(`${DD()}/data/es_MX/summoner.json`),
+    api(`${DD()}/data/${DATA_LOC.dd}/champion.json`),
+    api(`${DD()}/data/${DATA_LOC.dd}/item.json`),
+    api(`${DD()}/data/${DATA_LOC.dd}/runesReforged.json`),
+    api(`${DD()}/data/${DATA_LOC.dd}/summoner.json`),
   ]);
   for (const c of Object.values(champ.data)) { S.champs[c.id] = c; S.byKey[+c.key] = c; }
   S.items = items.data;
   S.runes = runes;
   for (const st of runes) { S.styleById[st.id] = st; for (const sl of st.slots) for (const r of sl.runes) S.perkById[r.id] = r; }
   for (const s of Object.values(spells.data)) S.spells[+s.key] = s;
-  $('#patchLabel').textContent = 'Parche ' + S.v.split('.').slice(0, 2).join('.');
+  $('#patchLabel').textContent = L('Parche') + ' ' + S.v.split('.').slice(0, 2).join('.');
   let last = null; try { last = localStorage.getItem('lb.patch'); localStorage.setItem('lb.patch', S.v); } catch { }
   if (last && last !== S.v) {
     S.freshUntil = Date.now() + 20000; // new patch: skip cached stats from the previous one
-    setTimeout(() => toast(`¡Nuevo parche ${S.v.split('.').slice(0, 2).join('.')}! Builds, runas y tier list actualizadas.`), 1200);
+    setTimeout(() => toast(L('¡Nuevo parche {v}! Builds, runas y tier list actualizadas.', { v: S.v.split('.').slice(0, 2).join('.') })), 1200);
   }
   // non-critical extras
-  api(CD + 'es_mx/v1/perks.json').then(list => { for (const p of list) S.perksCD[p.id] = p; }).catch(() => { });
-  api(CD + 'es_mx/v1/items.json').then(list => { S.cdItems = {}; for (const i of list) S.cdItems[i.id] = i; }).catch(() => { });
+  api(CD + DATA_LOC.cd + '/v1/perks.json').then(list => { for (const p of list) S.perksCD[p.id] = p; }).catch(() => { });
+  api(CD + DATA_LOC.cd + '/v1/items.json').then(list => { S.cdItems = {}; for (const i of list) S.cdItems[i.id] = i; }).catch(() => { });
 }
 
 async function loadAugments() {
   if (S.aug) return S.aug;
   S.aug = {};
   try {
-    const list = await api(CD + 'es_mx/v1/cherry-augments.json');
+    const list = await api(CD + DATA_LOC.cd + '/v1/cherry-augments.json');
     for (const a of list) S.aug[a.id] = a;
   } catch { }
   return S.aug;
@@ -124,7 +124,7 @@ async function getDetail(id, mode, pos) {
 }
 
 async function getChampFull(c) {
-  try { const j = await api(`${DD()}/data/es_MX/champion/${c.id}.json`); return j.data[c.id]; } catch { return null; }
+  try { const j = await api(`${DD()}/data/${DATA_LOC.dd}/champion/${c.id}.json`); return j.data[c.id]; } catch { return null; }
 }
 
 /* ---------------- small UI helpers ---------------- */
@@ -141,7 +141,7 @@ document.addEventListener('error', e => {
 
 function itemImg(id, cls = 'ic') {
   const it = S.items[id] || S.cdItems?.[id];
-  const name = it?.name || ('Objeto ' + id);
+  const name = it?.name || (L('Objeto') + ' ' + id);
   return `<img class="${cls}" src="${img.item(id)}" alt="${esc(name)}" loading="lazy" data-tip="item:${id}">`;
 }
 function champImg(c, cls = 'ic') {
@@ -151,7 +151,7 @@ function champImg(c, cls = 'ic') {
 
 let toastT;
 function toast(msg, err = false) {
-  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+  const t = $('#toast'); t.textContent = L(String(msg)); t.className = 'toast show' + (err ? ' err' : '');
   clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast' + (err ? ' err' : ''), 3200);
 }
 
@@ -161,15 +161,15 @@ function tipHTML(key) {
   const [kind, id] = key.split(':');
   if (kind === 'item') {
     const it = S.items[id];
-    if (it) return `<b>${esc(it.name)}</b><span class="g">${it.gold?.total ? it.gold.total + ' de oro' : ''}</span><p>${esc(stripTags(it.description)).slice(0, 520).replace(/\n/g, '<br>')}</p>`;
+    if (it) return `<b>${esc(it.name)}</b><span class="g">${it.gold?.total ? L('{n} de oro', { n: it.gold.total }) : ''}</span><p>${esc(stripTags(it.description)).slice(0, 520).replace(/\n/g, '<br>')}</p>`;
     const c = S.cdItems?.[id];
-    return c ? `<b>${esc(c.name)}</b><p>${esc(stripTags(c.description)).slice(0, 400)}</p>` : `<b>Objeto ${esc(id)}</b>`;
+    return c ? `<b>${esc(c.name)}</b><p>${esc(stripTags(c.description)).slice(0, 400)}</p>` : `<b>${L('Objeto')} ${esc(id)}</b>`;
   }
   if (kind === 'rune') {
     const r = S.perkById[id];
     if (r) return `<b>${esc(r.name)}</b><p>${esc(stripTags(r.shortDesc || r.longDesc)).replace(/\n/g, '<br>')}</p>`;
     const c = S.perksCD[id];
-    return `<b>${esc(c?.name || SHARD_FALLBACK[id] || 'Runa')}</b>${c ? `<p>${esc(stripTags(c.shortDesc))}</p>` : ''}`;
+    return `<b>${esc(c?.name || SHARD_FALLBACK[id] || L('Runa'))}</b>${c ? `<p>${esc(stripTags(c.shortDesc))}</p>` : ''}`;
   }
   if (kind === 'spell') {
     const s = S.spells[id];
@@ -261,8 +261,8 @@ async function route() {
   }
 }
 const stale = t => t !== routeToken;
-const loadingHTML = (msg = 'Cargando…') => `<div class="inline-load"><div class="spinner"></div>${esc(msg)}</div>`;
-const errorBox = e => `<div class="error-box"><b>No se pudieron cargar los datos.</b><br>${esc(e?.message || e)}<br><span class="muted">Revisa tu conexión a internet o cambia la región en Ajustes.</span><br><button class="btn sm" onclick="route()">Reintentar</button></div>`;
+const loadingHTML = (msg = 'Cargando…') => `<div class="inline-load"><div class="spinner"></div>${esc(L(msg))}</div>`;
+const errorBox = e => `<div class="error-box"><b>${L('No se pudieron cargar los datos.')}</b><br>${esc(L(String(e?.message || e)))}<br><span class="muted">${L('Revisa tu conexión a internet o cambia la región en Ajustes.')}</span><br><button class="btn sm" onclick="route()">${L('Reintentar')}</button></div>`;
 
 /* ---------------- home ---------------- */
 function bestByRole(list) {
@@ -282,12 +282,12 @@ async function renderHome(t) {
     <section class="hero">
       <div class="hero-bg" style="background-image:url('${img.splash(bg)}')"></div>
       <h1><img src="icon.png" alt="">LEAGUE OF LEGENDS</h1>
-      <p>Builds, runas, orden de habilidades, aumentos y tier list del parche actual</p>
-      <div class="search"><svg viewBox="0 0 24 24" class="ico"><path d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg><input id="heroSearch" placeholder="Busca un campeón (Ahri, Jinx, Lee Sin…)" autocomplete="off"><div class="suggest" id="heroSuggest"></div></div>
+      <p>${L('Builds, runas, orden de habilidades, aumentos y tier list del parche actual')}</p>
+      <div class="search"><svg viewBox="0 0 24 24" class="ico"><path d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg><input id="heroSearch" placeholder="${L('Busca un campeón (Ahri, Jinx, Lee Sin…)')}" autocomplete="off"><div class="suggest" id="heroSuggest"></div></div>
     </section>
-    <div class="row-head"><h2>Mejores por rol</h2><span>Clasificatoria · ${esc(TIERS.find(x => x[0] === settings.tier)?.[1])}</span><a class="more" href="#/tier/ranked">Ver tier list completa →</a></div>
+    <div class="row-head"><h2>${L('Mejores por rol')}</h2><span>${MODES.ranked} · ${esc(TIERS.find(x => x[0] === settings.tier)?.[1])}</span><a class="more" href="#/tier/ranked">${L('Ver tier list completa →')}</a></div>
     <div id="homeRoles">${loadingHTML('Cargando tier list…')}</div>
-    <div class="row-head"><h2>ARAM Mayhem</h2><span>Campeones más fuertes ahora</span><a class="more" href="#/tier/aram">Ver todo →</a></div>
+    <div class="row-head"><h2>ARAM Mayhem</h2><span>${L('Campeones más fuertes ahora')}</span><a class="more" href="#/tier/aram">${L('Ver todo →')}</a></div>
     <div id="homeAram">${loadingHTML()}</div>`;
   attachSearch($('#heroSearch'), $('#heroSuggest'));
   $('#heroSearch').focus();
@@ -313,9 +313,9 @@ async function renderHome(t) {
 /* ---------------- champions grid ---------------- */
 async function renderChampions(t) {
   let role = 'ALL', q = '';
-  view.innerHTML = `<div class="tl-head"><h1>Campeones</h1><div class="sp"></div></div>
-    <div class="grid-tools"><input id="gq" placeholder="Filtrar por nombre…">
-      <div class="seg" id="groles"><button class="on" data-r="ALL">Todos</button>${ROLES.map(r => `<button data-r="${r.op}"><img src="${img.role(r.ic)}" alt="">${r.name}</button>`).join('')}</div></div>
+  view.innerHTML = `<div class="tl-head"><h1>${L('Campeones')}</h1><div class="sp"></div></div>
+    <div class="grid-tools"><input id="gq" placeholder="${L('Filtrar por nombre…')}">
+      <div class="seg" id="groles"><button class="on" data-r="ALL">${L('Todos')}</button>${ROLES.map(r => `<button data-r="${r.op}"><img src="${img.role(r.ic)}" alt="">${r.name}</button>`).join('')}</div></div>
     <div id="cgrid"></div>`;
   let tiers = {}, roles = {};
   const draw = () => {
@@ -351,7 +351,7 @@ async function renderTier(t, mode) {
   let role = 'ALL', sortKey = 'tier', sortDir = 1;
   view.innerHTML = `<div class="tl-head"><h1>Tier List · ${MODES[mode]}</h1><div class="sp"></div>
     <div class="seg" id="tlMode">${Object.entries(MODES).map(([k, v]) => `<button data-m="${k}" class="${k === mode ? 'on' : ''}">${v}</button>`).join('')}</div></div>
-    ${mode === 'ranked' ? `<div class="grid-tools"><div class="seg" id="tlRoles"><button class="on" data-r="ALL">Todos</button>${ROLES.map(r => `<button data-r="${r.op}"><img src="${img.role(r.ic)}" alt="">${r.name}</button>`).join('')}</div>
+    ${mode === 'ranked' ? `<div class="grid-tools"><div class="seg" id="tlRoles"><button class="on" data-r="ALL">${L('Todos')}</button>${ROLES.map(r => `<button data-r="${r.op}"><img src="${img.role(r.ic)}" alt="">${r.name}</button>`).join('')}</div>
       <span class="muted">${esc(TIERS.find(x => x[0] === settings.tier)?.[1])} · ${esc(REGIONS.find(x => x[0] === settings.region)?.[1])}</span></div>` : ''}
     <div id="tl">${loadingHTML('Cargando tier list…')}</div>`;
   $('#tlMode').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go('#/tier/' + b.dataset.m); });
@@ -374,14 +374,14 @@ async function renderTier(t, mode) {
   }
   const cols = [
     { k: 'rank', l: '#', num: false },
-    { k: 'name', l: 'Campeón' },
-    ...(mode === 'ranked' ? [{ k: 'pos', l: 'Rol' }] : []),
+    { k: 'name', l: L('Campeón') },
+    ...(mode === 'ranked' ? [{ k: 'pos', l: L('Rol') }] : []),
     { k: 'tier', l: 'Tier' },
     { k: 'wr', l: mode === 'arena' ? 'Top 4' : 'Win rate', num: true },
-    ...(mode === 'arena' ? [{ k: 'first', l: '1.er lugar', num: true }] : []),
+    ...(mode === 'arena' ? [{ k: 'first', l: L('1.er lugar'), num: true }] : []),
     { k: 'pr', l: 'Pick rate', num: true },
     ...(rows.some(r => r.br != null) ? [{ k: 'br', l: 'Ban rate', num: true }] : []),
-    { k: 'play', l: 'Partidas', num: true },
+    { k: 'play', l: L('Partidas'), num: true },
     ...(mode === 'ranked' ? [{ k: 'ctr', l: 'Counters' }] : []),
   ];
   const draw = () => {
@@ -407,7 +407,7 @@ async function renderTier(t, mode) {
           <td class="num">${pct(x.pr)}</td>
           ${cols.some(c => c.k === 'br') ? `<td class="num">${pct(x.br)}</td>` : ''}
           <td class="num muted">${fmt(x.play)}</td>
-          ${mode === 'ranked' ? `<td><div class="counters">${x.ctr.map(k => { const cc = S.byKey[k.champion_id]; return cc ? `<img src="${img.champ(cc)}" alt="${esc(cc.name)}" loading="lazy" data-tip="text:${encodeURIComponent(cc.name + ' — ' + c.name + ' gana ' + pct(k.wr))}">` : ''; }).join('')}</div></td>` : ''}
+          ${mode === 'ranked' ? `<td><div class="counters">${x.ctr.map(k => { const cc = S.byKey[k.champion_id]; return cc ? `<img src="${img.champ(cc)}" alt="${esc(cc.name)}" loading="lazy" data-tip="text:${encodeURIComponent(cc.name + ' — ' + c.name + ' ' + L('gana') + ' ' + pct(k.wr))}">` : ''; }).join('')}</div></td>` : ''}
         </tr>`;
     }).join('')}</tbody></table>`;
   };
@@ -466,7 +466,7 @@ function runeTree(style, selected, isPrimary) {
     ${slots.map((sl, i) => `<div class="rrow ${isPrimary && i === 0 ? 'key' : ''}">${sl.runes.map(r => `<img src="${img.rune(r.icon)}" alt="${esc(r.name)}" class="${selected.includes(r.id) ? 'sel' : ''}" data-tip="rune:${r.id}">`).join('')}</div>`).join('')}</div>`;
 }
 function shardsHTML(ids) {
-  return `<div class="shards"><h5 class="dim" style="margin:0 0 4px;font-size:12px">Fragmentos</h5>${(ids || []).map(id => {
+  return `<div class="shards"><h5 class="dim" style="margin:0 0 4px;font-size:12px">${L('Fragmentos')}</h5>${(ids || []).map(id => {
     const cd = S.perksCD[id];
     const src = cd ? cdAsset(cd.iconPath) : '';
     return `<div class="sh"><img src="${src || ph('+')}" alt="" data-tip="rune:${id}">${esc(cd?.name || SHARD_FALLBACK[id] || id)}</div>`;
@@ -478,7 +478,7 @@ function rarityKey(r) {
   if (r === 4 || r === 'kGold' || r === 1) return 'gold';
   return 'silver';
 }
-const RAR_LBL = { prism: 'Aumentos prismáticos', gold: 'Aumentos de oro', silver: 'Aumentos de plata' };
+const RAR_LBL = { prism: L('Aumentos prismáticos'), gold: L('Aumentos de oro'), silver: L('Aumentos de plata') };
 
 function gradeList(list, key, qualify) {
   // percentile grade within each rarity, among statistically relevant rows
@@ -510,8 +510,8 @@ function augmentsPanel(data, mode, champName) {
   const card = a => {
     const ic = augIcon(S.aug[a.id]);
     const sub = mode === 'arena'
-      ? `${pct(a.wr, 0)} top 4 · ${pct(a.pick, 1)} uso`
-      : `Rend. ${Math.round(a.perf)} · Pop. ${a.pop?.toFixed(1)}%`;
+      ? `${pct(a.wr, 0)} top 4 · ${pct(a.pick, 1)} ${L('uso')}`
+      : `${L('Rend.')} ${Math.round(a.perf)} · Pop. ${a.pop?.toFixed(1)}%`;
     return `<div class="aug" data-tip="text:${encodeURIComponent(a.name)}"><div class="ai"><img src="${ic.large || ph(a.name)}" data-fb="${ic.small}" alt="${esc(a.name)}" loading="lazy">${a.grade ? `<span class="tier t-${a.grade}">${a.grade}</span>` : ''}</div><div class="an"><b>${esc(a.name)}</b><small>${sub}</small></div></div>`;
   };
   const summary = Object.entries(groups).filter(([, g]) => g.length).map(([k, g]) => `
@@ -519,11 +519,11 @@ function augmentsPanel(data, mode, champName) {
   const all = Object.entries(groups).filter(([, g]) => g.length).map(([k, g]) => `
     <div class="aug-sec"><h4 class="${k}">${RAR_LBL[k]} <span class="dim" style="font-weight:400">(${g.length})</span></h4><div class="aug-grid">${g.map(card).join('')}</div></div>`).join('');
   return `<div class="card" id="augCard">
-    <div class="aug-banner"><img src="icon.png" alt="" style="width:46px;height:46px;border-radius:10px"><div><h3>${mode === 'arena' ? 'Mejores aumentos de Arena' : 'Tier list de aumentos ARAM Mayhem'} · ${esc(champName)}</h3>
-    <p>${mode === 'arena' ? 'Calificados por porcentaje de Top 4 (con suficiente muestra).' : 'Calificados por el índice de rendimiento de OP.GG; «Pop.» es la popularidad entre jugadores de este campeón.'}</p></div></div>
+    <div class="aug-banner"><img src="icon.png" alt="" style="width:46px;height:46px;border-radius:10px"><div><h3>${L(mode === 'arena' ? 'Mejores aumentos de Arena' : 'Tier list de aumentos ARAM Mayhem')} · ${esc(champName)}</h3>
+    <p>${L(mode === 'arena' ? 'Calificados por porcentaje de Top 4 (con suficiente muestra).' : 'Calificados por el índice de rendimiento de OP.GG; «Pop.» es la popularidad entre jugadores de este campeón.')}</p></div></div>
     <div id="augSummary" ${champState.augView ? 'hidden' : ''}>${summary}</div>
     <div id="augAll" ${champState.augView ? '' : 'hidden'}>${all}</div>
-    <button class="btn ghost aug-all" id="augToggle">${champState.augView ? 'Mostrar solo los mejores' : 'Mostrar todos los aumentos'}</button>
+    <button class="btn ghost aug-all" id="augToggle">${L(champState.augView ? 'Mostrar solo los mejores' : 'Mostrar todos los aumentos')}</button>
   </div>`;
 }
 
@@ -534,14 +534,14 @@ async function normalizedAugments(id, mode, detail) {
     try { rows = (await api(OPGG + `contents/stats/champions/${id}/aram-augments`)).data || []; } catch { }
     return rows.map(r => {
       const a = S.aug[r.id];
-      return { id: r.id, name: a?.nameTRA || ('Aumento ' + r.id), rarity: rarityKey(a?.rarity), perf: r.performance, pop: r.popular };
+      return { id: r.id, name: a?.nameTRA || (L('Aumento') + ' ' + r.id), rarity: rarityKey(a?.rarity), perf: r.performance, pop: r.popular };
     });
   }
   if (mode === 'arena') {
     const out = [];
     for (const g of detail?.augment_group || []) for (const r of g.augments || []) {
       const a = S.aug[r.id];
-      out.push({ id: r.id, name: a?.nameTRA || ('Aumento ' + r.id), rarity: rarityKey(a?.rarity ?? r.rarity ?? g.rarity), wr: r.win_rate ?? (r.play ? r.win / r.play : 0), pick: r.pick_rate, place: r.play ? r.total_place / r.play : null });
+      out.push({ id: r.id, name: a?.nameTRA || (L('Aumento') + ' ' + r.id), rarity: rarityKey(a?.rarity ?? r.rarity ?? g.rarity), wr: r.win_rate ?? (r.play ? r.win / r.play : 0), pick: r.pick_rate, place: r.play ? r.total_place / r.play : null });
     }
     return out;
   }
@@ -586,8 +586,8 @@ async function renderChamp(t, id, mode, pos) {
       </div>
       <div class="head-stats" id="headStats"></div>
     </section>
-    <div class="mode-tabs" id="modeTabs">${Object.entries(MODES).map(([k, v]) => `<button data-m="${k}" class="${k === mode ? 'on' : ''}">${v === 'Clasificatoria' ? 'Build' : v}</button>`).join('')}
-      <div class="right"><button class="btn ghost sm" id="openOpgg">Ver en OP.GG ↗</button></div></div>
+    <div class="mode-tabs" id="modeTabs">${Object.entries(MODES).map(([k, v]) => `<button data-m="${k}" class="${k === mode ? 'on' : ''}">${k === 'ranked' ? 'Build' : v}</button>`).join('')}
+      <div class="right"><button class="btn ghost sm" id="openOpgg">${L('Ver en OP.GG ↗')}</button></div></div>
     ${mode === 'ranked' ? `<div class="pos-bar"><div class="seg" id="posSeg">${ROLES.map(r => {
     const p = positions.find(x => x.name === r.op);
     return `<button data-p="${r.op}" class="${r.op === pos ? 'on' : ''}" ${p ? '' : 'style="opacity:.45"'}><img src="${img.role(r.ic)}" alt="">${r.name}${p ? ` <small class="dim">${pct(p.stats?.role_rate, 0)}</small>` : ''}</button>`;
@@ -621,10 +621,10 @@ async function renderChamp(t, id, mode, pos) {
       [mode === 'arena' ? 'Top 4' : 'Win rate', `<span class="${wrClass(avg.win_rate)}">${pct(avg.win_rate, 2)}</span>`],
       ['Pick rate', pct(avg.pick_rate)],
       ...(avg.ban_rate != null ? [['Ban rate', pct(avg.ban_rate)]] : []),
-      ['Partidas', fmt(avg.play)],
+      [L('Partidas'), fmt(avg.play)],
     ].map(([l, v]) => `<div class="stat"><b>${v}</b><span class="lab">${l}</span></div>`).join('');
   }
-  $('#metaInfo').textContent = [meta.version ? 'Parche ' + meta.version : '', mode === 'ranked' ? TIERS.find(x => x[0] === settings.tier)?.[1] : MODES[mode], REGIONS.find(x => x[0] === settings.region)?.[1]].filter(Boolean).join(' · ');
+  $('#metaInfo').textContent = [meta.version ? L('Parche') + ' ' + meta.version : '', mode === 'ranked' ? TIERS.find(x => x[0] === settings.tier)?.[1] : MODES[mode], REGIONS.find(x => x[0] === settings.region)?.[1]].filter(Boolean).join(' · ');
 
   const body = $('#champBody');
   const ctx = { c, id, mode, pos, d, abil, abilIcon, augs };
@@ -675,10 +675,10 @@ function champBodyHTML(ctx) {
   const hasClient = lcuState.connected;
 
   const buildList = builds.length ? `<div class="card blist">
-      <div class="tabs2">${[['best', 'Mejor'], ['wr', 'Win Rate'], ['common', 'Común']].map(([k, l]) => `<button data-bsort="${k}" class="${champState.buildSort === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-      <h5>Builds principales</h5>
+      <div class="tabs2">${[['best', L('Mejor')], ['wr', 'Win Rate'], ['common', L('Común')]].map(([k, l]) => `<button data-bsort="${k}" class="${champState.buildSort === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <h5>${L('Builds principales')}</h5>
       ${builds.slice(0, 8).map((x, i) => `<div class="bitem ${x === b ? 'on' : ''}" data-bidx="${i}">
-        <div class="t"><b>Build ${i + 1}</b><small>${fmt(x.play)} partidas</small></div>
+        <div class="t"><b>Build ${i + 1}</b><small>${fmt(x.play)} ${L('partidas')}</small></div>
         <div class="its">${x.ids.slice(0, 3).map(id => `<img src="${img.item(id)}" alt="" loading="lazy">`).join('')}</div>
         <span class="wrbox ${wrClass(x.wr)}">${pct(x.wr, 0)}</span></div>`).join('')}
     </div>` : '';
@@ -686,21 +686,21 @@ function champBodyHTML(ctx) {
   const optRow = (x, label) => `<div class="opt">${x.ids.map(id => itemImg(id, 'ic sm')).join('')}<span class="grow muted" style="font-size:12px">${label || ''}</span><span class="num"><b class="${wrClass(x.win / x.play)}">${pct(x.win / x.play)}</b>${fmt(x.play)}</span></div>`;
 
   const itemsCard = b || starters.length ? `<div class="card">
-      <h3>Build de objetos <small>${b ? `${pct(b.wr)} win rate · ${fmt(b.play)} partidas` : ''}</small>
-        <span style="margin-left:auto" class="import-row">${hasClient ? `<button class="btn ghost sm" data-import="items">Importar build</button>` : ''}</span></h3>
+      <h3>${L('Build de objetos')} <small>${b ? `${pct(b.wr)} win rate · ${fmt(b.play)} ${L('partidas')}` : ''}</small>
+        <span style="margin-left:auto" class="import-row">${hasClient ? `<button class="btn ghost sm" data-import="items">${L('Importar build')}</button>` : ''}</span></h3>
       <div class="item-blocks">
-        ${starters.length ? `<div class="iblock"><h4>Objetos iniciales</h4><div class="opt-list">${starters.map(x => optRow(x)).join('')}</div></div>` : ''}
-        ${boots.length ? `<div class="iblock"><h4>Botas</h4><div class="opt-list">${boots.map(x => optRow(x)).join('')}</div></div>` : ''}
-        ${b ? `<div class="iblock" style="grid-column:1/-1"><h4>Orden de construcción (núcleo)</h4><div class="items-row">${b.ids.map(id => itemImg(id, 'ic lg')).join('<span class="arrow">›</span>')}</div></div>` : ''}
-        ${situ.length ? `<div class="iblock" style="grid-column:1/-1"><h4>Objetos situacionales (4.º–6.º)</h4><div class="situ">${situ.map(x => `<div class="s">${itemImg(x.ids[0])}<span class="${wrClass(x.wr)}">${pct(x.wr, 0)}</span></div>`).join('')}</div></div>` : ''}
+        ${starters.length ? `<div class="iblock"><h4>${L('Objetos iniciales')}</h4><div class="opt-list">${starters.map(x => optRow(x)).join('')}</div></div>` : ''}
+        ${boots.length ? `<div class="iblock"><h4>${L('Botas')}</h4><div class="opt-list">${boots.map(x => optRow(x)).join('')}</div></div>` : ''}
+        ${b ? `<div class="iblock" style="grid-column:1/-1"><h4>${L('Orden de construcción (núcleo)')}</h4><div class="items-row">${b.ids.map(id => itemImg(id, 'ic lg')).join('<span class="arrow">›</span>')}</div></div>` : ''}
+        ${situ.length ? `<div class="iblock" style="grid-column:1/-1"><h4>${L('Objetos situacionales (4.º–6.º)')}</h4><div class="situ">${situ.map(x => `<div class="s">${itemImg(x.ids[0])}<span class="${wrClass(x.wr)}">${pct(x.wr, 0)}</span></div>`).join('')}</div></div>` : ''}
       </div></div>` : '';
 
-  const spellsCard = spells.length ? `<div class="card"><h3>Hechizos de invocador ${hasClient ? `<button class="btn ghost sm" style="margin-left:auto" data-import="spells">Aplicar</button>` : ''}</h3>
-      <div class="spells">${spells.map(x => `<div class="opt">${x.ids.map(id => S.spells[id] ? `<img class="ic sm" src="${img.spell(S.spells[id])}" alt="" data-tip="spell:${id}">` : '').join('')}<span class="grow"></span><span class="num"><b class="${wrClass(x.win / x.play)}">${pct(x.win / x.play)}</b>${pct(x.pick_rate, 0)} uso</span></div>`).join('')}</div></div>` : '';
+  const spellsCard = spells.length ? `<div class="card"><h3>${L('Hechizos de invocador')} ${hasClient ? `<button class="btn ghost sm" style="margin-left:auto" data-import="spells">${L('Aplicar')}</button>` : ''}</h3>
+      <div class="spells">${spells.map(x => `<div class="opt">${x.ids.map(id => S.spells[id] ? `<img class="ic sm" src="${img.spell(S.spells[id])}" alt="" data-tip="spell:${id}">` : '').join('')}<span class="grow"></span><span class="num"><b class="${wrClass(x.win / x.play)}">${pct(x.win / x.play)}</b>${pct(x.pick_rate, 0)} ${L('uso')}</span></div>`).join('')}</div></div>` : '';
 
-  const runesCard = rp ? `<div class="card"><h3>Runas <small>${pct(rp.win / rp.play)} win rate · ${pct(rp.pick_rate)} uso</small>
-      <button class="btn sm" style="margin-left:auto" data-import="runes" ${hasClient ? '' : 'disabled title="Abre el cliente de LoL para importar"'}>
-      <svg viewBox="0 0 24 24"><path d="M11 3h2v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6V3ZM5 19h14v2H5z"/></svg>Importar runas</button></h3>
+  const runesCard = rp ? `<div class="card"><h3>${L('Runas')} <small>${pct(rp.win / rp.play)} win rate · ${pct(rp.pick_rate)} ${L('uso')}</small>
+      <button class="btn sm" style="margin-left:auto" data-import="runes" ${hasClient ? '' : `disabled title="${L('Abre el cliente de LoL para importar')}"`}>
+      <svg viewBox="0 0 24 24"><path d="M11 3h2v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6V3ZM5 19h14v2H5z"/></svg>${L('Importar runas')}</button></h3>
       ${runes.length > 1 ? `<div class="rune-alts">${runes.map((r, i) => { const k = S.perkById[r.primary_rune_ids[0]]; const sec = S.styleById[r.secondary_page_id]; return `<div class="rune-alt ${r === rp ? 'on' : ''}" data-ridx="${i}"><img src="${k ? img.rune(k.icon) : ph('R')}" alt="">${sec ? `<img src="${img.rune(sec.icon)}" alt="" style="width:18px;height:18px">` : ''}<div><b style="font-size:12.5px">${esc(k?.name || '')}</b><small>${pct(r.win / r.play)} · ${fmt(r.play)}</small></div></div>`; }).join('')}</div>` : ''}
       <div class="runes-wrap">
         ${runeTree(S.styleById[rp.primary_page_id], rp.primary_rune_ids, true)}
@@ -708,8 +708,8 @@ function champBodyHTML(ctx) {
         ${shardsHTML(rp.stat_mod_ids)}
       </div></div>` : '';
 
-  const skillsCard = order ? `<div class="card"><h3>Orden de habilidades <small>${pct(skills.win / skills.play)} win rate · ${fmt(skills.play)} partidas</small></h3>
-      ${skillM ? `<div class="skill-prio"><span class="muted" style="font-size:12.5px;margin-right:6px">Prioridad:</span>${skillM.ids.map(k => `<span class="k">${abilIcon(k)}<b>${k}</b></span>`).join('<span class="gt">›</span>')}</div>` : ''}
+  const skillsCard = order ? `<div class="card"><h3>${L('Orden de habilidades')} <small>${pct(skills.win / skills.play)} win rate · ${fmt(skills.play)} ${L('partidas')}</small></h3>
+      ${skillM ? `<div class="skill-prio"><span class="muted" style="font-size:12.5px;margin-right:6px">${L('Prioridad:')}</span>${skillM.ids.map(k => `<span class="k">${abilIcon(k)}<b>${k}</b></span>`).join('<span class="gt">›</span>')}</div>` : ''}
       <div class="skill-grid"><div></div>${order.map((_, i) => `<div class="lvl">${i + 1}</div>`).join('')}
       ${['Q', 'W', 'E', 'R'].map(k => `<div class="lbl">${abilIcon(k, 'ic sm')}<span>${esc(abil[k]?.name || k)}</span></div>${order.map(o => `<div class="cell ${o === k ? 'on ' + k : ''}">${o === k ? k : ''}</div>`).join('')}`).join('')}
       </div></div>` : '';
@@ -721,16 +721,16 @@ function champBodyHTML(ctx) {
     const rows = ctr.filter(x => x.champion_id !== ctx.id && x.play >= Math.max(15, top * 0.06)).map(x => ({ ...x, wr: x.win / x.play }));
     const hard = [...rows].sort((a, b) => a.wr - b.wr).slice(0, 6);
     const easy = [...rows].sort((a, b) => b.wr - a.wr).slice(0, 6);
-    const li = arr => arr.map(x => { const cc = S.byKey[x.champion_id]; return cc ? `<div class="ctr" data-champ="${x.champion_id}">${champImg(cc, 'ic sm')}<span class="nm">${esc(cc.name)}</span><span class="num ${wrClass(x.wr)}">${pct(x.wr)}<small>${fmt(x.play)} part.</small></span></div>` : ''; }).join('');
-    countersCard = `<div class="two"><div class="card"><h3>Difícil contra <small>tu win rate</small></h3><div class="ctr-list">${li(hard)}</div></div>
-      <div class="card"><h3>Fácil contra <small>tu win rate</small></h3><div class="ctr-list">${li(easy)}</div></div></div>`;
+    const li = arr => arr.map(x => { const cc = S.byKey[x.champion_id]; return cc ? `<div class="ctr" data-champ="${x.champion_id}">${champImg(cc, 'ic sm')}<span class="nm">${esc(cc.name)}</span><span class="num ${wrClass(x.wr)}">${pct(x.wr)}<small>${fmt(x.play)} ${L('part.')}</small></span></div>` : ''; }).join('');
+    countersCard = `<div class="two"><div class="card"><h3>${L('Difícil contra')} <small>${L('tu win rate')}</small></h3><div class="ctr-list">${li(hard)}</div></div>
+      <div class="card"><h3>${L('Fácil contra')} <small>${L('tu win rate')}</small></h3><div class="ctr-list">${li(easy)}</div></div></div>`;
   }
 
   const augHTML = augmentsPanel(augs, mode, c.name);
-  if (!buildList && !itemsCard && !runesCard && !augHTML) return `<div class="error-box">OP.GG no tiene suficientes datos de ${esc(c.name)} en este modo/rol todavía.</div>`;
+  if (!buildList && !itemsCard && !runesCard && !augHTML) return `<div class="error-box">${L('OP.GG no tiene suficientes datos de {name} en este modo/rol todavía.', { name: esc(c.name) })}</div>`;
 
-  const importBar = hasClient && (rp || b) ? `<div class="import-bar"><div><b>Cliente de LoL conectado</b><span class="muted"> · importa la build de ${esc(c.name)} con un clic</span></div>
-      <button class="btn" data-import="all"><svg viewBox="0 0 24 24"><path d="M11 3h2v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6V3ZM5 19h14v2H5z"/></svg>Importar todo</button></div>` : '';
+  const importBar = hasClient && (rp || b) ? `<div class="import-bar"><div><b>${L('Cliente de LoL conectado')}</b><span class="muted">${L(' · importa la build de {name} con un clic', { name: esc(c.name) })}</span></div>
+      <button class="btn" data-import="all"><svg viewBox="0 0 24 24"><path d="M11 3h2v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6V3ZM5 19h14v2H5z"/></svg>${L('Importar todo')}</button></div>` : '';
   return `${importBar}${augHTML ? `<div style="margin-bottom:14px">${augHTML}</div>` : ''}
     <div class="layout">
       <div class="stack">${buildList}${spellsCard}</div>
@@ -745,17 +745,17 @@ function itemSetFor(ctx, buildIdx) {
   const blk = (type, ids) => ({ type: type.slice(0, 60), items: ids.map(id => ({ id: String(id), count: 1 })) });
   const blocks = [];
   const skillM = (d.skill_masteries || [])[0];
-  const skillTxt = skillM ? ` · Habilidades: ${skillM.ids.join(' › ')}` : '';
+  const skillTxt = skillM ? ` · ${L('Habilidades')}: ${skillM.ids.join(' › ')}` : '';
   const starters = (d.starter_items || []).filter(x => x.ids?.length);
-  if (starters[0]) blocks.push(blk('Iniciales' + skillTxt, starters[0].ids));
-  if (starters[1]) blocks.push(blk('Iniciales (alternativa)', starters[1].ids));
+  if (starters[0]) blocks.push(blk(L('Iniciales') + skillTxt, starters[0].ids));
+  if (starters[1]) blocks.push(blk(L('Iniciales (alternativa)'), starters[1].ids));
   const boots = (d.boots || []).filter(x => x.ids?.length).slice(0, 2).map(x => x.ids[0]);
-  if (boots.length) blocks.push(blk('Botas', boots));
-  if (main) blocks.push(blk(`Build principal (${pct(main.wr)} WR)`, main.ids));
-  ranked.filter(x => x !== main).slice(0, 2).forEach((x, i) => blocks.push(blk(`Build alternativa ${i + 2} (${pct(x.wr)} WR)`, x.ids)));
+  if (boots.length) blocks.push(blk(L('Botas'), boots));
+  if (main) blocks.push(blk(L('Build principal ({wr} WR)', { wr: pct(main.wr) }), main.ids));
+  ranked.filter(x => x !== main).slice(0, 2).forEach((x, i) => blocks.push(blk(L('Build alternativa {n} ({wr} WR)', { n: i + 2, wr: pct(x.wr) }), x.ids)));
   const used = new Set(blocks.flatMap(b => b.items.map(i => i.id)));
   const situ = scoreBuilds(d.last_items, 'best').map(x => x.ids[0]).filter(id => !used.has(String(id))).slice(0, 8);
-  if (situ.length) blocks.push(blk('Situacionales (4.º–6.º)', situ));
+  if (situ.length) blocks.push(blk(L('Situacionales (4.º–6.º)'), situ));
   if (!blocks.length) return null;
   return {
     title: `LB ${c.name} ${mode === 'ranked' ? roleOf(pos).name : MODES[mode]}`.slice(0, 40),
@@ -775,27 +775,27 @@ async function importOne(kind, ctx, idx = {}) {
   if (kind === 'runes') {
     const list = currentRunes(d);
     const rp = list[idx.rune ?? champState.runeIdx] || list[0];
-    if (!rp) throw new Error('No hay runas para este modo');
+    if (!rp) throw new Error(L('No hay runas para este modo'));
     await lcuPost('/api/lcu/runes', {
       name: `LB ${c.name} ${mode === 'ranked' ? roleOf(pos).name : MODES[mode]}`,
       primaryStyleId: rp.primary_page_id, subStyleId: rp.secondary_page_id,
       selectedPerkIds: [...rp.primary_rune_ids, ...rp.secondary_rune_ids, ...(rp.stat_mod_ids || [])],
     });
-    return 'runas';
+    return L('runas');
   }
   if (kind === 'spells') {
     const s = (d.summoner_spells || []).find(x => x.ids?.length === 2);
-    if (!s) throw new Error('No hay hechizos para este modo');
+    if (!s) throw new Error(L('No hay hechizos para este modo'));
     await lcuPost('/api/lcu/spells', { spell1Id: s.ids[0], spell2Id: s.ids[1] });
-    return 'hechizos';
+    return L('hechizos');
   }
   if (kind === 'items') {
     const set = itemSetFor(ctx, idx.build ?? (champState.buildSort === 'best' ? champState.buildIdx : 0));
-    if (!set) throw new Error('No hay build de objetos para este modo');
+    if (!set) throw new Error(L('No hay build de objetos para este modo'));
     await lcuPost('/api/lcu/itemset', set);
-    return 'build de objetos';
+    return L('build de objetos');
   }
-  throw new Error('Tipo desconocido');
+  throw new Error(L('Tipo desconocido'));
 }
 
 async function doImport(kind, ctx, btn) {
@@ -806,11 +806,11 @@ async function doImport(kind, ctx, btn) {
       for (const k of ['runes', 'items', 'spells']) {
         try { done.push(await importOne(k, ctx)); } catch (e) { failed.push(e.message); }
       }
-      if (done.length) toast(`${ctx.c.name}: ${done.join(', ')} importados ✔` + (failed.length ? ` (${failed[0]})` : ''));
+      if (done.length) toast(L('{name}: {what} importados ✔', { name: ctx.c.name, what: done.join(', ') }) + (failed.length ? ` (${failed[0]})` : ''));
       else toast(failed[0] || 'No se pudo importar', true);
     } else {
       const what = await importOne(kind, ctx);
-      toast(kind === 'items' ? `Build de ${ctx.c.name} importada: la verás en la tienda del juego ✔` : `${what[0].toUpperCase() + what.slice(1)} de ${ctx.c.name} importados ✔`);
+      toast(kind === 'items' ? L('Build de {name} importada: la verás en la tienda del juego ✔', { name: ctx.c.name }) : L('{What} de {name} importados ✔', { What: what[0].toUpperCase() + what.slice(1), what, name: ctx.c.name }));
     }
   } catch (e) { toast(e.message, true); }
   finally { if (btn) btn.disabled = false; }
@@ -830,13 +830,13 @@ async function autoImport(champId, mode, pos) {
   }
   let d;
   try { d = (await getDetail(champId, mode, pos)).data || {}; }
-  catch (e) { toast('No se pudo descargar la build de ' + c.name, true); return; }
+  catch (e) { toast(L('No se pudo descargar la build de {name}', { name: c.name }), true); return; }
   const ctx = { c, id: champId, mode, pos, d };
   const done = [];
   const failed = [];
   for (const k of kinds) { try { done.push(await importOne(k, ctx, { rune: 0, build: 0 })); } catch (e) { failed.push(e.message); } }
-  if (done.length) toast(`Importado automáticamente para ${c.name}: ${done.join(', ')} ✔` + (failed.length ? ` · ${failed[0]}` : ''));
-  else if (failed.length) toast(`No se pudo importar para ${c.name}: ${failed[0]}`, true);
+  if (done.length) toast(L('Importado automáticamente para {name}: {what} ✔', { name: c.name, what: done.join(', ') }) + (failed.length ? ` · ${failed[0]}` : ''));
+  else if (failed.length) toast(L('No se pudo importar para {name}: {err}', { name: c.name, err: L(failed[0]) }), true);
 }
 
 /* ---------------- League client (LCU) ---------------- */
@@ -878,7 +878,7 @@ function tftOverlayAuto(s) {
   }
 }
 const LCU_POS = { top: 'TOP', jungle: 'JUNGLE', middle: 'MID', bottom: 'ADC', utility: 'SUPPORT' };
-const PHASES = { None: 'En el cliente', Lobby: 'En sala', Matchmaking: 'Buscando partida', ReadyCheck: 'Partida encontrada', ChampSelect: 'Selección de campeón', InProgress: 'En partida', WaitingForStats: 'Fin de partida', EndOfGame: 'Fin de partida', PreEndOfGame: 'Fin de partida' };
+const PHASES = { None: L('En el cliente'), Lobby: L('En sala'), Matchmaking: L('Buscando partida'), ReadyCheck: L('Partida encontrada'), ChampSelect: L('Selección de campeón'), InProgress: L('En partida'), WaitingForStats: L('Fin de partida'), EndOfGame: L('Fin de partida'), PreEndOfGame: L('Fin de partida') };
 
 async function pollLCU() {
   try {
@@ -887,7 +887,7 @@ async function pollLCU() {
     lcuState = s;
     const pill = $('#lcuPill');
     pill.className = 'lcu' + (s.connected ? (s.phase === 'ChampSelect' ? ' select' : ' on') : '');
-    let txt = s.connected ? (PHASES[s.phase] || 'Cliente conectado') : 'Cliente no detectado';
+    let txt = s.connected ? (PHASES[s.phase] || L('Cliente conectado')) : L('Cliente no detectado');
     if (s.phase === 'ChampSelect' && s.championId && S.byKey[s.championId]) txt += ' · ' + S.byKey[s.championId].name;
     pill.querySelector('span').textContent = txt;
     if (was !== s.connected && location.hash.startsWith('#/champ/')) route(); // show/hide import buttons
@@ -920,15 +920,20 @@ function initSettings() {
   $('#setTier').innerHTML = TIERS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
   const m = $('#settingsModal');
   $('#settingsBtn').onclick = () => {
-    $('#setRegion').value = settings.region; $('#setTier').value = settings.tier;
+    $('#setRegion').value = settings.region; $('#setTier').value = settings.tier; $('#setLang').value = LANG;
     $('#setAutoOpen').checked = settings.autoOpen; $('#setAutoRunes').checked = settings.autoRunes; $('#setAutoItems').checked = settings.autoItems; $('#setAutoSpells').checked = settings.autoSpells; $('#setAutoOverlay').checked = settings.autoOverlay;
     m.hidden = false;
     drawVersion();
   };
   $('#checkUpdate').onclick = async () => {
-    $('#verLabel').textContent = 'Buscando actualizaciones…';
+    $('#verLabel').textContent = L('Buscando actualizaciones…');
     await fetch('/api/update/check', { method: 'POST' }).catch(() => { });
     setTimeout(pollUpdate, 4000);
+  };
+  $('#setLang').onchange = async e => {
+    // language lives in the app so both overlay windows follow it too
+    try { await fetch('/api/prefs?lang=' + e.target.value, { method: 'POST' }); } catch { }
+    location.reload();
   };
   const close = () => {
     const changed = settings.region !== $('#setRegion').value || settings.tier !== $('#setTier').value;
@@ -973,7 +978,7 @@ function cmpVer(a, b) {
 }
 function installUpdate() {
   const b = $('#updBanner');
-  b.innerHTML = '<i class="upd-ico">⬆</i><b>Instalando…</b><span>La app se reiniciará en un momento</span>';
+  b.innerHTML = `<i class="upd-ico">⬆</i><b>${L('Instalando…')}</b><span>${L('La app se reiniciará en un momento')}</span>`;
   if (upd.action === 'restart') fetch('/api/update/restart', { method: 'POST' }).catch(() => { });
   else setTimeout(() => location.reload(), 400);
 }
@@ -990,7 +995,7 @@ async function pollUpdate() {
     // Updates are downloaded in the background; the banner installs them on click.
     if (s.exeReady || (UI_VERSION && s.ui && cmpVer(s.ui, UI_VERSION) > 0)) {
       upd.action = s.exeReady ? 'restart' : 'reload';
-      banner(`<i class="upd-ico">⬆</i><b>Actualización ${esc(s.latest || s.ui)} disponible</b><span>${esc(s.notes || 'Clic para instalar')}</span><button class="btn sm">Clic para instalar</button>`);
+      banner(`<i class="upd-ico">⬆</i><b>${L('Actualización {v} disponible', { v: esc(s.latest || s.ui) })}</b><span>${esc(LANG === 'es' && s.notes ? s.notes : L('Clic para instalar'))}</span><button class="btn sm">${L('Clic para instalar')}</button>`);
     }
     drawVersion();
   } catch { }
@@ -999,8 +1004,8 @@ async function pollUpdate() {
 function drawVersion() {
   const s = upd.status, el = $('#verLabel');
   if (!el) return;
-  if (!s) { el.textContent = 'Versión ' + (UI_VERSION || ''); return; }
-  el.textContent = `Versión ${s.ui}` + (s.app !== s.ui ? ` (motor ${s.app})` : '') + (s.checking ? ' · buscando…' : s.error ? ' · ' + s.error : s.latest && cmpVer(s.latest, s.ui) <= 0 ? ' · al día' : '');
+  if (!s) { el.textContent = L('Versión') + ' ' + (UI_VERSION || ''); return; }
+  el.textContent = `${L('Versión')} ${s.ui}` + (s.app !== s.ui ? ` (${L('motor')} ${s.app})` : '') + (s.checking ? ' · ' + L('buscando…') : s.error ? ' · ' + L(s.error) : s.latest && cmpVer(s.latest, s.ui) <= 0 ? ' · ' + L('al día') : '');
 }
 // Long sessions: re-check the patch every hour so new builds appear without restarting.
 async function checkPatch() {
