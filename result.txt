@@ -1,0 +1,15 @@
+ok Mon Nov  2 18:17:29 UTC 2026
+openjdk version "25.0.5" 2026-10-20 LTS
+ANDROID_HOME=/usr/local/lib/android/sdk
+36.0.0
+36.1.0
+37.0.0
+android-37.2-beta1
+android-37.2-beta2
+android-37.2-beta3
+Welcome to Gradle 9.8.2!
+Gradle 9.8.2
+go version go1.26.10 linux/amd64
+opgg 200
+metatft 200
+mcp 400
