@@ -1,0 +1,15 @@
+name: probe
+on: push
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: write result branch
+        run: |
+          git config --global user.name ci && git config --global user.email ci@users.noreply.github.com
+          mkdir r && cd r && git init -q -b ci-probe-result
+          { echo "ok $(date -u)"; java -version 2>&1 | head -1; echo "ANDROID_HOME=$ANDROID_HOME"; ls $ANDROID_HOME/build-tools | tail -3; ls $ANDROID_HOME/platforms | tail -3; gradle --version 2>/dev/null | grep Gradle; go version; curl -s -o /dev/null -w "opgg %{http_code}\n" https://op.gg/tft/meta-trends/comps; curl -s -o /dev/null -w "metatft %{http_code}\n" "https://api-hc.metatft.com/tft-comps-api/unit_items_processed"; curl -s -o /dev/null -w "mcp %{http_code}\n" -X POST https://mcp-api.op.gg/mcp; } > result.txt 2>&1
+          git add -A && git commit -qm result
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-probe-result
