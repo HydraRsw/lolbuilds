@@ -4,6 +4,7 @@
    The language lives in the app (/api/prefs) so the main window and both overlay
    windows always agree; it defaults to the Windows language. */
 const LANG = (() => {
+  if (window.LB_PREFS) return LB_PREFS.lang || (/^es/i.test(navigator.language || '') ? 'es' : 'en');
   try {
     const x = new XMLHttpRequest();
     x.open('GET', '/api/prefs', false);
@@ -151,6 +152,11 @@ const EN = {
   'prom': 'avg', 'Tablero': 'Board', 'Objetos de los carries': 'Carry items', 'Componentes': 'Components', 'Quitar fijado': 'Unpin',
   '📌 Fijar esta compo': '📌 Pin this comp', 'Copiar código': 'Copy code', 'Compo fijada arriba': 'Comp pinned on top', 'Compo quitada': 'Comp unpinned',
   'Código copiado ✔': 'Code copied ✔', 'Arrastra para mover': 'Drag to move', 'Sin datos de objetos.': 'No item data.',
+  // mobile
+  'El overlay funciona en la app de Android: descárgala arriba.': 'The overlay works in the Android app: download it above.',
+  'Nueva versión de la app': 'New app version', 'Toca para descargarla': 'Tap to download it',
+  'App de Android con overlay': 'Android app with overlay', 'Descarga el APK para ver compos y recetas encima de TFT': 'Download the APK to see comps and recipes on top of TFT',
+  'Instálala en tu iPhone': 'Install it on your iPhone', 'Compartir → «Agregar a inicio»': 'Share → “Add to Home Screen”',
   'mejor en': 'best on', 'compos': 'comps', 'recetas': 'recipes',
   'Cerrar (Ctrl+Shift+C para volver a abrirla)': 'Close (Ctrl+Shift+C to open it again)',
 };

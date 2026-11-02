@@ -1,0 +1,54 @@
+/* Phone layout for the TFT screens (on top of app.css). */
+body.mob{overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)}
+.m-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:rgba(13,15,20,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.m-top img{width:28px;height:28px;border-radius:7px}
+.m-top b{font-size:17px;flex:1}
+.m-top b span{color:var(--gold)}
+.m-top b em{font-style:normal;font-size:12px;color:var(--muted);margin-left:4px}
+.m-chip{background:var(--card);border:1px solid var(--line2);color:var(--text);border-radius:8px;padding:6px 10px;font-weight:700}
+.m-banner{display:flex;align-items:center;gap:10px;margin:10px 12px 0;padding:10px 12px;border-radius:12px;background:linear-gradient(90deg,#3a2a0a,#241c0c);border:1px solid var(--gold);font-size:13px;cursor:pointer}
+.m-banner[hidden]{display:none}
+.m-banner b{white-space:nowrap}
+.m-banner span{color:var(--muted);min-width:0}
+#ov{padding:12px 12px 40px;max-width:900px;margin:0 auto}
+
+/* TFT header + tabs */
+.mob .tft-top{gap:10px}
+.mob .tft-top h1{font-size:20px}
+.mob .tft-top .seg{width:100%;flex-wrap:nowrap;overflow-x:auto}
+.mob .tft-top .seg button{flex:1;white-space:nowrap;padding:8px 6px}
+.mob .tft-top .btn{width:100%;justify-content:center;margin-left:0 !important}
+.mob .grid-tools{flex-wrap:wrap}
+.mob .grid-tools input,.mob .grid-tools .sel{flex:1 1 100%;min-width:0;width:100%}
+.mob .grid-tools .seg{overflow-x:auto;flex-wrap:nowrap;max-width:100%}
+.mob .grid-tools > span.muted{margin-left:0 !important}
+
+/* comps list */
+.mob .comp-row{grid-template-columns:40px 1fr;gap:10px;padding:12px}
+.mob .comp-row .cstats{grid-column:1/-1}
+.mob .tier.big{min-width:36px;height:36px;font-size:15px}
+.mob .cunits{gap:6px 0}
+.mob .tu{width:48px}
+.mob .tu-img{width:40px;height:40px}
+
+/* comp page */
+.mob .comp-head .cstats{min-width:0;width:100%}
+.mob .comp-head .btn{width:100%;justify-content:center}
+.mob .stage-grid{grid-template-columns:1fr}
+.mob .board{zoom:.68}
+.mob .two,.mob .layout{grid-template-columns:1fr}
+.mob .carry-row{flex-wrap:wrap}
+.mob .carry-row .alt{margin-left:34px}
+
+/* lists */
+.mob .tc-grid{grid-template-columns:1fr}
+.mob .trait-list{grid-template-columns:1fr}
+.mob table.tl{display:block;overflow-x:auto}
+.mob .tl th,.mob .tl td{padding:7px 8px}
+.mob .bis-main{flex-wrap:wrap}
+
+@media (min-width:700px){
+  .mob .comp-row{grid-template-columns:52px 1fr 280px}
+  .mob .comp-row .cstats{grid-column:auto}
+  .mob .board{zoom:.85}
+}

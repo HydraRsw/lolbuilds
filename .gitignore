@@ -1,1 +1,6 @@
 dist/
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/build/
+*.jks
+*.keystore

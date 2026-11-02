@@ -1,0 +1,145 @@
+# Mobile version: refreshes the TFT data, builds the Android APK and publishes
+# the mobile site on the gh-pages branch (GitHub Pages).
+#   - every 3 hours: new data (reuses the last APK)
+#   - on push to main / manual run: also rebuilds the APK
+# Logs of every run are pushed to the ci-logs branch.
+name: mobile
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 */3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-site
+  cancel-in-progress: false
+
+env:
+  SITE_URL: https://hydrarsw.github.io/lolbuilds/
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Previous site (keeps the APK and any data source that fails)
+        run: |
+          mkdir -p logs prev
+          if git fetch --depth 1 origin gh-pages 2>/dev/null; then
+            git archive FETCH_HEAD | tar -x -C prev
+          fi
+          ls prev | head -50 > logs/prev.txt
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Export TFT data
+        env:
+          GOPROXY: direct
+          GOSUMDB: 'off'
+          GOFLAGS: -mod=mod
+        run: |
+          set -o pipefail
+          go build -o lb . 2>&1 | tee logs/go-build.txt
+          mkdir -p site/data
+          cp prev/data/*.json site/data/ 2>/dev/null || true
+          ./lb --export-tft site/data 2>&1 | tee logs/export.txt
+
+      - name: Set up Java
+        if: github.event_name != 'schedule' || hashFiles('prev/LoLBuilds.apk') == ''
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        if: github.event_name != 'schedule' || hashFiles('prev/LoLBuilds.apk') == ''
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Signing key
+        id: key
+        if: github.event_name != 'schedule' || hashFiles('prev/LoLBuilds.apk') == ''
+        env:
+          APK_SEED: ${{ secrets.APK_SIGNING_PASSWORD }}
+        run: |
+          # The signing key is generated once, encrypted with the APK_SIGNING_PASSWORD
+          # repository secret, and kept on the apk-key branch. Without the secret a
+          # temporary key is used (the APK works, but updates need a reinstall).
+          KS=mobile/android/keystore.jks
+          DN="CN=LoL Builds TFT, O=HydraRsw, C=CO"
+          if [ ${#APK_SEED} -lt 8 ]; then
+            echo "APK_SIGNING_PASSWORD secret missing or shorter than 8 characters: temporary key" | tee logs/signing.txt
+            P=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore $KS -storepass "$P" -keypass "$P" -alias lolbuilds -keyalg RSA -keysize 2048 -validity 20000 -dname "$DN" >/dev/null 2>&1
+          elif git fetch --depth 1 origin apk-key 2>/dev/null; then
+            git show FETCH_HEAD:keystore.jks.enc > ks.enc
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 -pass env:APK_SEED -in ks.enc -out $KS \
+              || { echo "could not decrypt the signing key (was APK_SIGNING_PASSWORD changed?)" | tee logs/signing.txt; exit 1; }
+            P="$APK_SEED"
+            echo "using the saved signing key" | tee logs/signing.txt
+          else
+            P="$APK_SEED"
+            keytool -genkeypair -keystore $KS -storepass "$P" -keypass "$P" -alias lolbuilds -keyalg RSA -keysize 2048 -validity 20000 -dname "$DN" >/dev/null 2>&1
+            mkdir keybranch
+            openssl enc -e -aes-256-cbc -pbkdf2 -iter 250000 -salt -pass env:APK_SEED -in $KS -out keybranch/keystore.jks.enc
+            cd keybranch && git init -q -b apk-key && git config user.name "github-actions[bot]" && git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A && git commit -qm "encrypted APK signing key" && git push -q "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" apk-key
+            echo "created and saved a new signing key" | tee ../logs/signing.txt
+          fi
+          echo "::add-mask::$P"
+          echo "KS_PASS=$P" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        id: apk
+        if: github.event_name != 'schedule' || hashFiles('prev/LoLBuilds.apk') == ''
+        continue-on-error: true
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          set -o pipefail
+          cd mobile/android
+          gradle assembleRelease --no-daemon --stacktrace 2>&1 | tee ../../logs/android.txt
+          cp app/build/outputs/apk/release/app-release.apk ../../LoLBuilds.apk
+          echo "{\"versionCode\": ${VERSION_CODE}, \"versionName\": \"${VERSION_NAME}\", \"built\": \"$(date -u +%FT%TZ)\"}" > ../../apk.json
+
+      - name: Assemble site
+        run: |
+          cp -r web/* site/
+          cp -r mobile/web/* site/
+          touch site/.nojekyll
+          if [ -f LoLBuilds.apk ]; then cp LoLBuilds.apk apk.json site/;
+          elif [ -f prev/LoLBuilds.apk ]; then cp prev/LoLBuilds.apk prev/apk.json site/; fi
+          ls -la site site/data > logs/site.txt
+
+      - name: Publish to gh-pages
+        run: |
+          cd site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Mobile site ${{ github.run_number }} (${{ github.event_name }})"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" gh-pages
+
+      - name: Save logs
+        if: always()
+        run: |
+          cd logs
+          echo "run ${{ github.run_number }} ${{ github.event_name }} apk=${{ steps.apk.outcome }} at $(date -u)" > summary.txt
+          git init -q -b ci-logs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "logs ${{ github.run_number }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-logs

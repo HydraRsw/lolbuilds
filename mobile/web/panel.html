@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoL Builds · overlay</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  html,body{margin:0;height:100%;background:#0d0f14;overflow:hidden}
+  body{display:flex;flex-direction:column}
+  .ptabs{display:flex;flex:none;border-bottom:1px solid var(--line)}
+  .ptabs button{flex:1;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font-weight:700;padding:10px 4px;font-size:14px}
+  .ptabs button.on{color:var(--text);border-bottom-color:var(--gold)}
+  iframe{flex:1;border:0;width:100%;min-height:0;background:#0d0f14}
+  iframe[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="ptabs" id="tabs"><button data-t="comps" class="on" data-i18n>Composiciones</button><button data-t="recipes" data-i18n>Recetas</button></div>
+<iframe id="fComps" src="overlay.html"></iframe>
+<iframe id="fRecipes" hidden></iframe>
+<script src="platform.js"></script>
+<script src="i18n.js"></script>
+<script>
+  // The Android bubble shows this page; each tab is one of the desktop overlay windows.
+  const tabs = document.getElementById('tabs'), fc = document.getElementById('fComps'), fr = document.getElementById('fRecipes');
+  tabs.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    tabs.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    const rec = b.dataset.t === 'recipes';
+    if (rec && !fr.src) fr.src = 'overlay-recipes.html';
+    fr.hidden = !rec; fc.hidden = rec;
+  };
+</script>
+</body>
+</html>

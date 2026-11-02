@@ -49,7 +49,7 @@ if (tip) document.addEventListener('mousemove', e => {
   tip.style.left = x + 'px'; tip.style.top = y + 'px';
 });
 // In the overlay, links should not navigate away.
-document.addEventListener('click', e => { const a = e.target.closest('a[href^="#/"]'); if (a) e.preventDefault(); }, true);
+if (!window.LB_MOBILE_APP) document.addEventListener('click', e => { const a = e.target.closest('a[href^="#/"]'); if (a) e.preventDefault(); }, true);
 window.onClickThrough = on => document.body.classList.toggle('clickthru', on);
 
 /* item helpers shared by both overlay windows (T comes from tft.js) */

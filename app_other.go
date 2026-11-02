@@ -11,6 +11,13 @@ import (
 // Non-Windows build: used for development and testing. Serves the UI on a
 // fixed port and prints the URL.
 func main() {
+	if len(os.Args) > 2 && os.Args[1] == "--export-tft" {
+		if err := exportTFT(os.Args[2]); err != nil {
+			fmt.Println("export:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	addr := os.Getenv("LOLB_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:8777"

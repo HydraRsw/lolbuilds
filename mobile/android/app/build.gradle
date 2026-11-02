@@ -1,0 +1,39 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'gg.lolbuilds.tft'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'gg.lolbuilds.tft'
+        minSdk 24
+        targetSdk 35
+        versionCode((System.getenv('VERSION_CODE') ?: '1') as int)
+        versionName System.getenv('VERSION_NAME') ?: '1.0'
+        // The app shows the site GitHub Pages serves, so screens update without a new APK.
+        buildConfigField 'String', 'SITE_URL', "\"${System.getenv('SITE_URL') ?: 'https://hydrarsw.github.io/lolbuilds/'}\""
+    }
+    buildFeatures { buildConfig true }
+
+    signingConfigs {
+        release {
+            // The key is created and kept encrypted by the CI workflow (see mobile.yml);
+            // it never lives in the repository. Same key on every build = APK updates install in place.
+            storeFile file('../keystore.jks')
+            storePassword System.getenv('KS_PASS')
+            keyAlias 'lolbuilds'
+            keyPassword System.getenv('KS_PASS')
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { abortOnError false; checkReleaseBuilds false }
+}
