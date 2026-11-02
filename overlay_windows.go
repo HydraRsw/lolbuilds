@@ -96,7 +96,7 @@ type winMsg struct {
 type rect struct{ L, T, R, B int32 }
 
 // startHotkeys registers the global overlay hotkeys in the main process
-// (Ctrl+Shift+X = 1, Ctrl+Shift+Z = 2) and returns a function that removes them.
+// (Ctrl+Shift+X = 1, Ctrl+Shift+Z = 2, Ctrl+Shift+C = 3) and returns a function that removes them.
 func startHotkeys(cb func(id int)) func() {
 	tid := make(chan uintptr, 1)
 	go func() {
@@ -106,8 +106,10 @@ func startHotkeys(cb func(id int)) func() {
 		tid <- t
 		pRegisterHotKey.Call(0, 1, modControl|modShift|modNoRepeat, 'X')
 		pRegisterHotKey.Call(0, 2, modControl|modShift|modNoRepeat, 'Z')
+		pRegisterHotKey.Call(0, 3, modControl|modShift|modNoRepeat, 'C')
 		defer pUnregisterHotKey.Call(0, 1)
 		defer pUnregisterHotKey.Call(0, 2)
+		defer pUnregisterHotKey.Call(0, 3)
 		var m winMsg
 		for {
 			r, _, _ := pGetMessage.Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0)
@@ -216,7 +218,7 @@ func runOverlay(url, kind string) {
 			resp.Body.Close()
 			if s.V != lastV {
 				lastV = s.V
-				if s.Visible {
+				if s.Visible && !(kind == "recipes" && s.RecipesHidden) {
 					pShowWindow.Call(hw, swShowNoActivate)
 					keepOnTop(hw)
 				} else {

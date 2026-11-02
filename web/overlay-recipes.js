@@ -31,7 +31,8 @@ function render() {
   const pin = pinnedComp();
   const need = new Set(pin ? pin.units.flatMap(u => u.items || []) : []);
   let html = `<div class="rbar"><div class="grip" onmousedown="ovDragStart(event)" title="${L('Arrastra para mover')}">⠿</div>
-    ${comps.map(c => `<div class="cell ${RB.sel === c.apiName ? 'on' : ''}" data-c="${esc(c.apiName)}" title="${esc(c.name)}"><img src="${c.icon}" alt="${esc(c.name)}"></div>`).join('')}</div>`;
+    ${comps.map(c => `<div class="cell ${RB.sel === c.apiName ? 'on' : ''}" data-c="${esc(c.apiName)}" title="${esc(c.name)}"><img src="${c.icon}" alt="${esc(c.name)}"></div>`).join('')}
+    <div class="close" id="rbClose" title="${L('Cerrar (Ctrl+Shift+C para volver a abrirla)')}">✕</div></div>`;
   if (RB.sel) {
     const rows = comps.map(k => ({ k, it: recipeFor(RB.sel, k.apiName) })).filter(x => x.it);
     html += `<div class="row"><div class="lead">+</div>
@@ -56,6 +57,7 @@ function fit() {
 }
 
 wrap.addEventListener('click', e => {
+  if (e.target.closest('#rbClose')) { RB.sel = null; fetch('/api/overlay/state?recipes=hide', { method: 'POST' }).then(render).catch(() => { }); return; }
   const c = e.target.closest('[data-c]');
   if (c) { RB.sel = RB.sel === c.dataset.c ? null : c.dataset.c; RB.item = null; render(); return; }
   const i = e.target.closest('[data-i]');

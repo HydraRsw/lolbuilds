@@ -98,7 +98,7 @@ const EN = {
   'Importado automáticamente para {name}: {what} ✔': 'Auto-imported for {name}: {what} ✔', 'No se pudo importar para {name}: {err}': 'Could not import for {name}: {err}',
   // overlay toggles
   'No se pudo abrir el overlay': 'Could not open the overlay', 'Overlay cerrado': 'Overlay closed',
-  'Overlay abierto · Ctrl+Shift+X lo oculta, Ctrl+Shift+Z deja pasar los clics': 'Overlay open · Ctrl+Shift+X hides it, Ctrl+Shift+Z lets clicks through',
+  'Overlay abierto · Ctrl+Shift+X lo oculta, Ctrl+Shift+Z deja pasar los clics, Ctrl+Shift+C muestra u oculta las recetas': 'Overlay open · Ctrl+Shift+X hides it, Ctrl+Shift+Z lets clicks through, Ctrl+Shift+C shows/hides the recipes',
   'Partida de TFT detectada: overlay abierto (Ctrl+Shift+X para ocultarlo)': 'TFT game detected: overlay open (Ctrl+Shift+X to hide it)',
   // messages from the app engine
   'cliente de LoL no detectado': 'LoL client not detected', 'página de runas inválida': 'invalid rune page', 'datos inválidos': 'invalid data',
@@ -151,5 +151,6 @@ const EN = {
   'prom': 'avg', 'Tablero': 'Board', 'Objetos de los carries': 'Carry items', 'Componentes': 'Components', 'Quitar fijado': 'Unpin',
   '📌 Fijar esta compo': '📌 Pin this comp', 'Copiar código': 'Copy code', 'Compo fijada arriba': 'Comp pinned on top', 'Compo quitada': 'Comp unpinned',
   'Código copiado ✔': 'Code copied ✔', 'Arrastra para mover': 'Drag to move', 'Sin datos de objetos.': 'No item data.',
-  'mejor en': 'best on', 'compos': 'comps',
+  'mejor en': 'best on', 'compos': 'comps', 'recetas': 'recipes',
+  'Cerrar (Ctrl+Shift+C para volver a abrirla)': 'Close (Ctrl+Shift+C to open it again)',
 };

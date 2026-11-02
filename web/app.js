@@ -863,7 +863,7 @@ async function overlayCall(action) {
 async function toggleOverlay() {
   try {
     const j = await overlayCall('toggle');
-    toast(j.running ? 'Overlay abierto · Ctrl+Shift+X lo oculta, Ctrl+Shift+Z deja pasar los clics' : 'Overlay cerrado');
+    toast(j.running ? 'Overlay abierto · Ctrl+Shift+X lo oculta, Ctrl+Shift+Z deja pasar los clics, Ctrl+Shift+C muestra u oculta las recetas' : 'Overlay cerrado');
   } catch (e) { toast(e.message, true); }
 }
 function tftOverlayAuto(s) {

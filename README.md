@@ -26,7 +26,7 @@ Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedi
 - **Composiciones** (derecha): muestra 2 compos a la vez (desplázate para ver más; al abrir una crece para mostrar su tablero) con su tablero por etapa, objetos de los carries, componentes y botón para fijar tu compo.
 - **Recetas** (barra horizontal): un componente por casilla; al hacer clic se despliega debajo todo lo que arma con cada otro componente, con estadísticas y en qué compos se usa. Los objetos de tu compo fijada se marcan en dorado.
 - Pasa el mouse sobre un campeón (en el overlay o en la app) para ver sus objetos en esa compo, sus objetos ideales (BIS) y alternativas.
-- Atajos (controlan las dos): **Ctrl+Shift+X** ocultar/mostrar, **Ctrl+Shift+Z** dejar pasar los clics al juego.
+- Atajos: **Ctrl+Shift+X** ocultar/mostrar las dos ventanas, **Ctrl+Shift+Z** dejar pasar los clics al juego, **Ctrl+Shift+C** ocultar/mostrar solo la barra de recetas (también se cierra con su ✕).
 
 Además: campeones con objetos ideales (BIS), tier list de objetos con recetas, emblemas y artefactos, y sinergias con el rendimiento de cada umbral (MetaTFT).
 
@@ -64,5 +64,5 @@ LoL Builds is a Windows desktop app (Spanish and English) with League of Legends
 - **Download:** [LoLBuilds.exe](https://github.com/HydraRsw/lolbuilds/raw/updates/LoLBuilds.exe). No install needed, and it updates itself.
 - **Language:** follows your Windows language. Change it in Settings → Language. The game data (champion, item, rune and TFT names) switches language too.
 - **League client:** detects champ select, opens your champion, and imports runes, item sets and summoner spells (automatically when you lock in, if enabled).
-- **TFT overlay:** two always-on-top windows (TFT in borderless mode): a comps panel and a horizontal recipe bar. **Ctrl+Shift+X** hides them and **Ctrl+Shift+Z** lets clicks pass through to the game.
+- **TFT overlay:** two always-on-top windows (TFT in borderless mode): a comps panel and a horizontal recipe bar. **Ctrl+Shift+X** hides them, **Ctrl+Shift+Z** lets clicks pass through to the game, and **Ctrl+Shift+C** (or the ✕) hides/shows just the recipe bar.
 - Unofficial app, not endorsed by Riot Games.

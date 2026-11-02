@@ -20,6 +20,8 @@ type overlayState struct {
 	Visible   bool `json:"visible"`
 	ClickThru bool   `json:"clickThru"`
 	Pin       string `json:"pin"` // comp pinned in the comps window (highlighted in the recipe bar)
+	// recipe bar closed with its ✕ or Ctrl+Shift+C (the comps window stays)
+	RecipesHidden bool `json:"recipesHidden"`
 }
 
 type overlayMgr struct {
@@ -86,8 +88,17 @@ func (o *overlayMgr) hotkey(id int) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	switch id {
-	case 1:
+	case 1: // Ctrl+Shift+X: hide/show both (showing also brings back the recipe bar)
 		o.state.Visible = !o.state.Visible
+		if o.state.Visible {
+			o.state.RecipesHidden = false
+		}
+	case 3: // Ctrl+Shift+C: hide/show only the recipe bar
+		if !o.state.Visible {
+			o.state.Visible, o.state.RecipesHidden = true, false
+		} else {
+			o.state.RecipesHidden = !o.state.RecipesHidden
+		}
 	case 2:
 		o.state.ClickThru = !o.state.ClickThru
 		o.state.Visible = true
@@ -133,7 +144,14 @@ func (o *overlayMgr) handle(w http.ResponseWriter, r *http.Request) {
 func (o *overlayMgr) handleState(w http.ResponseWriter, r *http.Request) {
 	o.mu.Lock()
 	if r.Method == http.MethodPost {
-		o.state.Pin = r.URL.Query().Get("pin")
+		q := r.URL.Query()
+		if q.Has("pin") {
+			o.state.Pin = q.Get("pin")
+		}
+		if q.Get("recipes") == "hide" { // ✕ on the recipe bar
+			o.state.RecipesHidden = true
+			o.state.V++
+		}
 	}
 	s := o.state
 	o.mu.Unlock()
