@@ -50,6 +50,7 @@ function compCard(d) {
   return `<div class="oc ${pinned ? 'pinned' : ''}" data-id="${esc(d.id)}">
     <div class="oc-h"><span class="tier ${TIER_CLS(d.stat?.opTier)}">${esc(d.stat?.opTier || '?')}</span><span class="nm">${pinned ? '📌 ' : ''}${esc(deckName(d))}</span>
       <span class="st"><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b> ${L('prom')} · <b>${pct(s.top4Rate, 0)}</b> top4</span></div>
+    ${d.requirements?.length ? `<div class="oc-req">${reqBadges(d)}</div>` : ''}
     <div class="oc-u">${units.map(u => tUnit(u.key, { stars: u.tier, items: u.items, carry: u.isCore, name: false, deck: d.id })).join('')}</div>
     ${body}</div>`;
 }

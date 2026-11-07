@@ -28,7 +28,7 @@ var nextChunkRe = regexp.MustCompile(`self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)
 
 func (t *tftService) handleComps(w http.ResponseWriter, r *http.Request) {
 	force := r.URL.Query().Get("fresh") == "1"
-	b, err := t.p.cached("tft:comps:v1", 2*time.Hour, force, true, t.produceComps)
+	b, err := t.p.cached("tft:comps:v2", 2*time.Hour, force, true, t.produceComps)
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -51,6 +51,12 @@ func (t *tftService) produceComps() ([]byte, error) {
 			return nil, err
 		}
 		decks, source = decks2, "op.gg-mcp"
+	} else if len(decks) > 0 && decks[0]["requirements"] != nil {
+		// new page format: no early/mid boards, borrow them from the MCP list
+		source = "op.gg-v2"
+		if donors, err := t.compsFromMCP(); err == nil && len(donors) > 0 {
+			mergeBoards(decks, donors)
+		}
 	}
 	for _, d := range decks {
 		slimDeck(d)
@@ -86,7 +92,30 @@ func (t *tftService) compsFromPage() ([]map[string]any, error) {
 		}
 		collectDecks(v, seen, &out)
 	}
-	return out, nil
+	if len(out) > 0 {
+		return out, nil
+	}
+	// format v2 (RSC references, localized strings)
+	list, byID := compsV2(html)
+	if len(list) == 0 {
+		return nil, nil
+	}
+	setNames(byID, "es_MX", byID)
+	// names come localized: take Spanish and English from each language's page
+	for _, lp := range []struct{ lang, url, al string }{
+		{"es_MX", "https://op.gg/es/tft/meta-trends/comps", "es-MX,es;q=0.9"},
+		{"en_US", "https://op.gg/en/tft/meta-trends/comps", "en-US,en;q=0.9"},
+	} {
+		if b, err := t.p.download(lp.url, map[string]string{"Accept": "text/html", "Accept-Language": lp.al}); err == nil {
+			if _, other := compsV2(b); len(other) > 0 {
+				setNames(byID, lp.lang, other)
+			}
+		}
+	}
+	for _, d := range list {
+		cleanupV2(d)
+	}
+	return list, nil
 }
 
 func isHex(s string) bool {
@@ -192,6 +221,19 @@ func slimDeck(d map[string]any) {
 			}
 		}
 		d["name"] = keep
+	}
+	if rb, ok := d["requirementBadges"].([]any); ok && d["requirements"] == nil && len(rb) > 0 {
+		var reqs []any
+		for _, bv := range rb {
+			if b, ok := bv.(map[string]any); ok {
+				name := b["name"]
+				if s, ok := name.(string); ok {
+					name = map[string]any{"es_MX": s}
+				}
+				reqs = append(reqs, map[string]any{"type": b["type"], "key": b["key"], "imageUrl": b["imageUrl"], "name": name, "description": b["description"]})
+			}
+		}
+		d["requirements"] = reqs
 	}
 	delete(d, "requirementBadges")
 	if st, ok := d["stat"].(map[string]any); ok {

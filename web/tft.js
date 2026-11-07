@@ -114,6 +114,18 @@ function traitChip(t) {
 }
 const deckName = d => (LANG === 'en' ? d.name?.en_US : (d.name?.es_MX || d.name?.es_ES)) || d.name?.en_US || (typeof d.name === 'string' ? d.name : L('Composición'));
 const badgeVal = (d, k) => (d.badge || []).find(b => b.key === k)?.value;
+// Comps that are only good with a specific augment or emblem (OP.GG "requirementBadges").
+const reqName = r => (LANG === 'en' ? r.name?.en_US : (r.name?.es_MX || r.name?.es_ES)) || r.name?.en_US || r.name?.es_MX || itemInfo(r.key || '').name;
+const reqIsAug = r => /augment/i.test(r.type || '') || /augment/i.test(r.key || '');
+const reqLabel = r => L(reqIsAug(r) ? 'Solo con {name}' : 'Requiere {name}', { name: reqName(r) });
+function reqBadges(d) {
+  return (d.requirements || []).map(r => {
+    const icon = r.imageUrl || itemInfo(r.key || '').icon;
+    const tip = (r.description || '').replace(/<[^>]+>/g, ' ').trim();
+    const why = L(reqIsAug(r) ? 'Esta compo solo rinde si consigues este aumento.' : 'Esta compo necesita este emblema para ser buena.');
+    return `<span class="req ${reqIsAug(r) ? 'r-aug' : 'r-emb'}" data-tip="text:${encodeURIComponent(reqLabel(r) + ' — ' + (tip && tip.length > 12 ? tip : why))}">${icon ? `<img src="${esc(icon)}" data-fb="${esc(itemInfo(r.key || '').fb)}" alt="">` : ''}${esc(reqLabel(r))}</span>`;
+  }).join('');
+}
 const DIFF = { 1: [L('Fácil'), 'easy'], 2: [L('Media'), 'mid'], 3: [L('Difícil'), 'hard'] };
 const TIER_CLS = t => ({ OP: 't-OP', S: 't-S', A: 't-A', B: 't-B', C: 't-C', D: 't-D' }[t] || 't-C');
 
@@ -235,7 +247,7 @@ async function renderComps(t) {
       return `<div class="comp-row" data-id="${esc(d.id)}">
         <div class="ctier"><span class="tier big ${TIER_CLS(d.stat?.opTier)}">${esc(d.stat?.opTier || '?')}</span></div>
         <div class="cmain">
-          <div class="cname">${esc(deckName(d))}${diff ? `<span class="diff ${diff[1]}">${diff[0]}</span>` : ''}${playStyle(d) ? `<span class="pill">${esc(playStyle(d))}</span>` : ''}</div>
+          <div class="cname">${esc(deckName(d))}${diff ? `<span class="diff ${diff[1]}">${diff[0]}</span>` : ''}${playStyle(d) ? `<span class="pill">${esc(playStyle(d))}</span>` : ''}${reqBadges(d)}</div>
           <div class="ctraits">${(d.traits || []).filter(x => x.style > 0).sort((a, b) => b.style - a.style).map(traitChip).join('')}</div>
           <div class="cunits">${units.map(u => tUnit(u.key, { stars: u.tier, items: u.items, carry: u.isCore, deck: d.id })).join('')}</div>
         </div>
@@ -330,7 +342,7 @@ async function renderComp(t, id) {
       <span class="tier big ${TIER_CLS(d.stat?.opTier)}">${esc(d.stat?.opTier || '?')}</span>
       <div style="flex:1;min-width:0">
         <h2>${esc(deckName(d))}</h2>
-        <div class="row-chips">${diff ? `<span class="diff ${diff[1]}">${L('Dificultad: {d}', { d: diff[0] })}</span>` : ''}${playStyle(d) ? `<span class="pill">${esc(playStyle(d))}</span>` : ''}<span class="pill">${d.cost ? L('Costo total {n} de oro', { n: d.cost }) : ''}</span></div>
+        <div class="row-chips">${diff ? `<span class="diff ${diff[1]}">${L('Dificultad: {d}', { d: diff[0] })}</span>` : ''}${playStyle(d) ? `<span class="pill">${esc(playStyle(d))}</span>` : ''}${d.cost ? `<span class="pill">${L('Costo total {n} de oro', { n: d.cost })}</span>` : ''}${reqBadges(d)}</div>
       </div>
       <div class="cstats">
         <div><b>${s.avgPlacement?.toFixed(2) ?? '—'}</b><span>${L('Prom.')}</span></div>
@@ -380,6 +392,9 @@ function gamePlan(d, stages, carries, compList) {
   const active = trs => (trs || []).filter(x => x.style > 0).sort((a, b) => b.style - a.style).slice(0, 3).map(x => `${esc(traitInfo(x.key, x.meta?.name).name)} ${x.numUnits}`).join(', ');
   const steps = [];
   const lst = arr => arr.join(', ');
+  for (const q of d.requirements || []) steps.push([L('Requisito'), reqIsAug(q)
+    ? L('Esta compo solo es buena si te sale el aumento <b>{name}</b>. Juégala cuando te lo ofrezcan; si no aparece, elige otra compo.', { name: esc(reqName(q)) })
+    : L('Necesita <b>{name}</b> para ser buena. Búscalo en el carrusel, en los aumentos o en los monstruos; sin él, cambia a otra compo.', { name: esc(reqName(q)) })]);
   if (early) steps.push([L('Etapa 2 · Inicio'), L('Juega <b>{units}</b> (nivel {lvl}){traits}. {comps}Si te llegan los objetos del carry, póntelos a la unidad más fuerte del tablero y pásalos luego.', {
     units: lst(early.units.map(u => name(keyOf(u)))), lvl: early.lvl,
     traits: active(early.traits) ? L(', activando {t}', { t: active(early.traits) }) : '',
