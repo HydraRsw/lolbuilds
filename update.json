@@ -1,0 +1,9 @@
+{
+ "version": "1.7.2",
+ "ui": "1.7.2",
+ "exe": "1.7.0",
+ "minExe": "1.7.0",
+ "notes": "TFT: aumentos sin repetidos (una versi\u00f3n por aumento) y con el campe\u00f3n cuando el aumento es de un campe\u00f3n.",
+ "uiSha256": "455ca15293c23797d80031bd6c1094914717bcbdad4f8aa88a636f1c450be2c7",
+ "exeSha256": "3890d0a3001e0c4e48eb6c42fa7c159f8c20890c1f3556efe7e7474cb698310b"
+}
