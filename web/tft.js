@@ -73,6 +73,8 @@ function tftLoadAugs() {
 }
 function augInfo(id) {
   const a = T.aug[id];
+  const who = id.match(/_([A-Z][a-zA-Z]+)$/)?.[1], champ = who && Object.values(T.champ).find(c => c.name === who || shortKey(c.apiName).replace(/\d+|_.*$/g, '') === who);
+  if (a?.name && champ && !a.name.includes(champ.name)) return { id, name: `${a.name} (${champ.name})`, icon: a.icon || '', desc: a.desc || '', effects: a.effects, traits: a.traits || [] };
   return { id, name: a?.name || id.replace(/^[A-Z]+_(\d+_)?/, '').replace(/PlusPlus$/, '++').replace(/Plus$/, '+').replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2'), icon: a?.icon || '', desc: a?.desc || '', effects: a?.effects, traits: a?.traits || [] };
 }
 // MetaTFT cluster for an OP.GG comp: most similar units (Jaccard), with a bonus when
@@ -111,8 +113,15 @@ function compAugs(d) {
     return { id, t, spec, gt: g[id]?.[0] || '', gr };
   });
   list.sort((a, b) => (AUG_TR[a.t] ?? 9) - (AUG_TR[b.t] ?? 9) || b.spec - a.spec || a.gr - b.gr);
-  const perfect = list.filter(x => x.t === 'S').slice(0, 6);
-  const options = list.filter(x => !perfect.includes(x) && x.t !== 'B').slice(0, 12);
+  // one chip per augment family (X, X+, X++): the best ranked one, listing the other versions
+  const fams = new Map();
+  for (const x of list) {
+    const k = x.id.replace(/(Plus)+(?=_|$)/g, '').replace(/_?(I{1,3})$/, '');
+    if (fams.has(k)) fams.get(k).vars.push(x.id); else fams.set(k, { ...x, vars: [] });
+  }
+  const fl = [...fams.values()];
+  const perfect = fl.filter(x => x.t === 'S').slice(0, 6);
+  const options = fl.filter(x => !perfect.includes(x) && x.t !== 'B').slice(0, 10);
   return { perfect, options, title: cl.title };
 }
 function augChip(x, deck = '', compact = false) {
