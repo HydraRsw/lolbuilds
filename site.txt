@@ -1,0 +1,41 @@
+site:
+total 384
+drwxr-xr-x  3 runner runner  4096 Nov  7 10:22 .
+drwxr-xr-x 10 runner runner  4096 Nov  7 10:22 ..
+-rw-r--r--  1 runner runner     0 Nov  7 10:22 .nojekyll
+-rw-r--r--  1 runner runner 59344 Nov  7 10:22 LoLBuilds.apk
+-rw-r--r--  1 runner runner    78 Nov  7 10:22 apk.json
+-rw-r--r--  1 runner runner 32355 Nov  7 10:22 app.css
+-rw-r--r--  1 runner runner 60166 Nov  7 10:22 app.js
+drwxr-xr-x  2 runner runner  4096 Nov  7 10:22 data
+-rw-r--r--  1 runner runner 18766 Nov  7 10:22 i18n.js
+-rw-r--r--  1 runner runner 14195 Nov  7 10:22 icon-192.png
+-rw-r--r--  1 runner runner 62900 Nov  7 10:22 icon-512.png
+-rw-r--r--  1 runner runner  6854 Nov  7 10:22 icon.png
+-rw-r--r--  1 runner runner  1342 Nov  7 10:22 index.html
+-rw-r--r--  1 runner runner   485 Nov  7 10:22 manifest.webmanifest
+-rw-r--r--  1 runner runner  2555 Nov  7 10:22 mobile.css
+-rw-r--r--  1 runner runner  3079 Nov  7 10:22 mobile.js
+-rw-r--r--  1 runner runner  4039 Nov  7 10:22 overlay-common.js
+-rw-r--r--  1 runner runner  2983 Nov  7 10:22 overlay-recipes.html
+-rw-r--r--  1 runner runner  4630 Nov  7 10:22 overlay-recipes.js
+-rw-r--r--  1 runner runner  6573 Nov  7 10:22 overlay.html
+-rw-r--r--  1 runner runner  7953 Nov  7 10:22 overlay.js
+-rw-r--r--  1 runner runner  1617 Nov  7 10:22 panel.html
+-rw-r--r--  1 runner runner  3147 Nov  7 10:22 platform.js
+-rw-r--r--  1 runner runner 47457 Nov  7 10:22 tft.js
+-rw-r--r--  1 runner runner    39 Nov  7 10:22 version.json
+
+site/data:
+total 1024
+drwxr-xr-x 2 runner runner   4096 Nov  7 10:22 .
+drwxr-xr-x 3 runner runner   4096 Nov  7 10:22 ..
+-rw-r--r-- 1 runner runner    366 Nov  7 10:22 meta.json
+-rw-r--r-- 1 runner runner  13186 Nov  7 10:22 mt-items.json
+-rw-r--r-- 1 runner runner   7906 Nov  7 10:22 mt-traits.json
+-rw-r--r-- 1 runner runner  66245 Nov  7 10:22 mt-uip.json
+-rw-r--r-- 1 runner runner   5851 Nov  7 10:22 mt-units.json
+-rw-r--r-- 1 runner runner  92931 Nov  7 10:22 tft-augs.json
+-rw-r--r-- 1 runner runner 180563 Nov  7 10:22 tft-comps.json
+-rw-r--r-- 1 runner runner 314115 Nov  7 10:22 tft-static-en_us.json
+-rw-r--r-- 1 runner runner 339554 Nov  7 10:22 tft-static-es_mx.json
