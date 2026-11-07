@@ -35,6 +35,8 @@ func exportTFT(dir string) error {
 
 	b, err := t.produceComps()
 	write("tft-comps.json", b, err)
+	b, err = t.produceAugs()
+	write("tft-augs.json", b, err)
 
 	for _, lang := range []string{"es_mx", "en_us"} {
 		raw, err := p.download(cdragonTFT+lang+".json", nil)

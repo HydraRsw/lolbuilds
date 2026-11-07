@@ -4,7 +4,7 @@
 
 const MT = 'https://api-hc.metatft.com/';
 const MT_Q = 'queue=1100&patch=current&days=3&permit_filter_adjustment=true';
-const T = { st: null, comps: null, champ: {}, champByName: {}, trait: {}, traitByName: {}, item: {}, metaUnit: {}, stats: null, uip: null };
+const T = { st: null, comps: null, champ: {}, champByName: {}, trait: {}, traitByName: {}, item: {}, aug: {}, augs: null, metaUnit: {}, stats: null, uip: null };
 
 /* ---------- loading ---------- */
 async function tftJSON(path, fresh) {
@@ -13,13 +13,14 @@ async function tftJSON(path, fresh) {
   if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
 }
-let tftStaticP = null, tftCompsP = null, tftStatsP = null;
+let tftStaticP = null, tftCompsP = null, tftStatsP = null, tftAugsP = null;
 function tftLoadStatic() {
   return tftStaticP ??= tftJSON('/api/tft/static?lang=' + DATA_LOC.cd, Date.now() < S.freshUntil).then(st => {
     T.st = st;
     for (const c of st.champions) { T.champ[c.apiName] = c; T.champByName[c.name] = c; }
     for (const t of st.traits) { T.trait[t.apiName] = t; T.traitByName[t.name] = t; }
     for (const i of st.items) T.item[i.apiName] = i;
+    for (const a of st.augments || []) T.aug[a.apiName] = a;
     return st;
   }).catch(e => { tftStaticP = null; throw e; });
 }
@@ -64,6 +65,63 @@ function fillMissingBoards(d, all) {
   const place = (u, spots) => { const s = spots.find(([x, y]) => !taken.has(x + ',' + y)); if (s) { u.cell = { x: s[0], y: s[1] }; taken.add(s.join(',')); } };
   const isBack = u => u.isCore && !(u.items || []).some(i => TANK_ITEM.test(i));
   for (const u of d.units.filter(u => !u.cell)) { place(u, isBack(u) ? back : front); d._autoPos = true; }
+}
+
+/* ---------- augments per comp (MetaTFT expert tiers per comp cluster) ---------- */
+function tftLoadAugs() {
+  return tftAugsP ??= tftJSON('/api/tft/augs').then(j => (T.augs = j)).catch(e => { tftAugsP = null; throw e; });
+}
+function augInfo(id) {
+  const a = T.aug[id];
+  return { id, name: a?.name || id.replace(/^[A-Z]+_(\d+_)?/, '').replace(/PlusPlus$/, '++').replace(/Plus$/, '+').replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2'), icon: a?.icon || '', desc: a?.desc || '', effects: a?.effects, traits: a?.traits || [] };
+}
+// MetaTFT cluster with the most similar units (Jaccard), or null.
+function compCluster(d) {
+  if (d._cl !== undefined) return d._cl;
+  const cls = T.augs?.clusters; if (!cls) return null;
+  const keys = new Set(d.units.map(u => u.key));
+  let best = null, score = 0;
+  for (const c of Object.values(cls)) {
+    const inter = c.units.filter(k => keys.has(k)).length;
+    const j = inter / (keys.size + c.units.length - inter);
+    if (j > score) { score = j; best = c; }
+  }
+  return (d._cl = score >= 0.4 ? best : null);
+}
+const AUG_TR = { S: 0, A: 1, B: 2, C: 3, D: 4 };
+const shortKey = k => k.replace(/^[A-Z]+_(\d+_)?|\d+$|_A[DP]$/g, '');
+// { perfect: [...], options: [...] } — S tier first; augments tied to the comp's
+// traits or units ahead of generic ones; ties broken by the global expert tier list.
+function compAugs(d) {
+  const cl = compCluster(d); if (!cl) return null;
+  const units = d.units.map(u => shortKey(u.key)).filter(n => n.length > 2);
+  const traits = new Set((d.traits || []).filter(t => t.style > 0).map(t => t.key));
+  const g = T.augs.global || {};
+  const list = cl.augs.map(([id, t]) => {
+    const a = augInfo(id);
+    const spec = a.traits.some(x => traits.has(x)) || units.some(n => id.includes('_' + n));
+    const gr = g[id] ? AUG_TR[g[id][0]] * 1000 + g[id][1] : 9e9;
+    return { id, t, spec, gt: g[id]?.[0] || '', gr };
+  });
+  list.sort((a, b) => (AUG_TR[a.t] ?? 9) - (AUG_TR[b.t] ?? 9) || b.spec - a.spec || a.gr - b.gr);
+  const perfect = list.filter(x => x.t === 'S').slice(0, 6);
+  const options = list.filter(x => !perfect.includes(x) && x.t !== 'B').slice(0, 12);
+  return { perfect, options, title: cl.title };
+}
+function augChip(x, deck = '', compact = false) {
+  const a = augInfo(x.id);
+  const img = a.icon ? `<img src="${esc(a.icon)}" alt="" loading="lazy">` : `<span class="aug-ph">${esc(a.name.slice(0, 2))}</span>`;
+  const tip = `data-tip="tft-aug:${encodeURIComponent(x.id + '|' + x.t + '|' + (x.gt || '') + '|' + (x.spec ? 1 : 0))}"`;
+  if (compact) return `<span class="augc t${x.t}" ${tip}>${img}</span>`;
+  return `<span class="augc t${x.t} ${x.spec ? 'spec' : ''}" ${tip}>${img}<span class="an">${esc(a.name)}</span><b class="at">${x.t}</b></span>`;
+}
+function augSection(d) {
+  if (!T.augs) return `<div class="inline-load"><div class="spinner"></div></div>`;
+  const r = compAugs(d);
+  if (!r) return `<p class="muted">${L('No hay datos de aumentos para esta compo.')}</p>`;
+  return `<h4 class="sub">${L('Perfectos')}</h4><div class="aug-list">${r.perfect.map(x => augChip(x, d.id)).join('')}</div>
+    ${r.options.length ? `<h4 class="sub">${L('Otras opciones')}</h4><div class="aug-list">${r.options.map(x => augChip(x, d.id)).join('')}</div>` : ''}
+    <p class="fine">${L('Tier de cada aumento para esta compo según jugadores expertos (MetaTFT). Con borde: específicos de esta compo (sus sinergias o campeones).')}</p>`;
 }
 
 function placesStats(places) {
@@ -184,6 +242,10 @@ function tftTip(kind, key) {
     const i = itemInfo(key), raw = T.item[key], st = T.stats?.items?.[key];
     const recipe = i.comp.length ? `<p>${L('Receta: {r}', { r: i.comp.map(c => esc(itemInfo(c).name)).join(' + ') })}</p>` : '';
     return `<b>${esc(i.name)}</b>${recipe}${raw?.desc ? `<p>${tftDesc(raw.desc, raw.effects)}</p>` : ''}${st ? `<p>${L('Prom.')} ${st.avg.toFixed(2)} · Top 4 ${pct(st.top4)}</p>` : ''}`;
+  }
+  if (kind === 'aug') {
+    const [id, tier, gt, spec] = key.split('|'), a = augInfo(id);
+    return `<b>${esc(a.name)}</b><span class="g">${L('Tier en esta compo')}: ${tier}${gt ? ` · ${L('General')}: ${gt}` : ''}</span>${spec === '1' ? `<p>${L('Específico de esta compo.')}</p>` : ''}${a.desc ? `<p>${tftDesc(a.desc, a.effects || {})}</p>` : ''}`;
   }
   if (kind === 'trait') {
     const t = T.trait[key], info = traitInfo(key);
@@ -358,6 +420,7 @@ async function renderComp(t, id) {
       <div class="seg" id="stageTabs" style="margin-bottom:14px">${stages.map((g, i) => `<button data-i="${i}">${g.l} · ${L('Nivel')} ${g.lvl}</button>`).join('')}</div>
       <div id="stageBody"></div>
     </div>
+    <div class="card" style="margin-bottom:14px"><h3>${L('Aumentos recomendados')}</h3><div id="augBox">${augSection(d)}</div></div>
     <div class="two">
       <div class="card"><h3>${L('Carries y objetos')}</h3>
         ${carries.map((u, i) => `<div class="carry-row"><span class="prio">${i + 1}</span>${tUnit(u.key, { stars: u.tier, name: true, deck: d.id })}<div class="its">${u.items.map(it => `${tItemImg(it, 'ti')}`).join('')}</div>
@@ -374,6 +437,7 @@ async function renderComp(t, id) {
     catch { prompt(L('Copia este código:'), d.teamCode); }
   });
   draw();
+  tftLoadAugs().then(() => { if (!stale(t) && $('#augBox')) $('#augBox').innerHTML = augSection(d); }).catch(() => { if (!stale(t) && $('#augBox')) $('#augBox').innerHTML = `<p class="muted">${L('No se pudieron cargar los aumentos.')}</p>`; });
   tftLoadStats().then(() => { if (stale(t)) return; $$('.carry-row .alt').forEach((el, i) => { const u = carries[i]; if (u) el.innerHTML = bisFor(u.key, u.items).map(it => tItemImg(it, 'ti sm')).join(''); }); });
 }
 

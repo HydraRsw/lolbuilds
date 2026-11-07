@@ -43,6 +43,7 @@
       return orig(target.href);
     }
     if (u.pathname === '/api/tft/comps') return orig(DATA + 'tft-comps.json');
+    if (u.pathname === '/api/tft/augs') return orig(DATA + 'tft-augs.json');
     if (u.pathname === '/api/tft/static') return orig(DATA + 'tft-static-' + (q.get('lang') === 'en_us' ? 'en_us' : 'es_mx') + '.json');
     if (u.pathname === '/api/prefs') {
       if (method === 'POST' && q.get('lang')) LS.set('lb.lang', q.get('lang'));

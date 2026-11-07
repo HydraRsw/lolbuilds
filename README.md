@@ -20,7 +20,7 @@ App de escritorio para Windows (en **español e inglés**) con builds, runas, or
 Windows mostrará un aviso de SmartScreen la primera vez porque el exe no está firmado: «Más información» → «Ejecutar de todas formas».
 
 ## TFT
-Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedio; aviso cuando una compo solo es buena con un **aumento** o **emblema** concreto («Solo con …» / «Requiere …»); tableros por etapa (inicio, medio y final) con posicionamiento en hexágonos, qué agregar o quitar entre etapas, carries con sus objetos, componentes a priorizar, guía «Cómo jugarla» y botón para copiar el código del Planificador de equipo. 
+Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedio; **aumentos recomendados** por compo (perfectos y otras opciones, con su tier según jugadores expertos de MetaTFT); aviso cuando una compo solo es buena con un **aumento** o **emblema** concreto («Solo con …» / «Requiere …»); tableros por etapa (inicio, medio y final) con posicionamiento en hexágonos, qué agregar o quitar entre etapas, carries con sus objetos, componentes a priorizar, guía «Cómo jugarla» y botón para copiar el código del Planificador de equipo. 
 
 **Overlay de TFT:** dos ventanas siempre visibles encima del juego (TFT en modo *sin bordes*), sin barra de título: se arrastran desde ⠿ y recuerdan su posición. Se abren solas al empezar una partida de TFT (configurable) o con el botón de la pestaña TFT.
 - **Composiciones** (derecha): muestra 1 compo a la vez con los filtros de tier arriba (desplázate para ver la siguiente; al abrir una crece para mostrar su tablero) con su tablero por etapa, objetos de los carries, componentes y botón para fijar tu compo.
@@ -65,7 +65,7 @@ App no oficial, no respaldada por Riot Games.
 
 ## English
 
-LoL Builds is a Windows desktop app (Spanish and English) with League of Legends builds, runes, skill order, augments (ARAM Mayhem and Arena) and tier lists in an OP.GG/Blitz-style layout, plus a TFT section with meta comps (flagging comps that need a specific augment or emblem), boards by stage, items, traits and an in-game overlay.
+LoL Builds is a Windows desktop app (Spanish and English) with League of Legends builds, runes, skill order, augments (ARAM Mayhem and Arena) and tier lists in an OP.GG/Blitz-style layout, plus a TFT section with meta comps (recommended augments per comp, and flags for comps that need a specific augment or emblem), boards by stage, items, traits and an in-game overlay.
 
 - **Download:** [LoLBuilds.exe](https://github.com/HydraRsw/lolbuilds/raw/updates/LoLBuilds.exe). No install needed, and it updates itself.
 - **Language:** follows your Windows language. Change it in Settings → Language. The game data (champion, item, rune and TFT names) switches language too.

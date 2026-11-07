@@ -232,6 +232,7 @@ func startServer(addr string) (string, *updater, error) {
 	t := &tftService{p: p}
 	mux.HandleFunc("/api/tft/comps", t.handleComps)
 	mux.HandleFunc("/api/tft/static", t.handleStatic)
+	mux.HandleFunc("/api/tft/augs", t.handleAugs)
 
 	lcu := newLCU()
 	mux.HandleFunc("/api/lcu/state", lcu.handleState)

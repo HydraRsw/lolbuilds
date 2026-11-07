@@ -260,7 +260,7 @@ func (t *tftService) handleStatic(w http.ResponseWriter, r *http.Request) {
 		lang = "es_mx"
 	}
 	src := cdragonTFT + lang + ".json"
-	b, err := t.p.cached("tft:static:v1:"+lang, 12*time.Hour, force, true, func() ([]byte, error) {
+	b, err := t.p.cached("tft:static:v2:"+lang, 12*time.Hour, force, true, func() ([]byte, error) {
 		raw, err := t.p.cached(src, 12*time.Hour, force, false, func() ([]byte, error) { return t.p.download(src, nil) })
 		if err != nil {
 			return nil, err
@@ -296,6 +296,7 @@ type cdItem struct {
 	Effects     map[string]any `json:"effects"`
 	Tags        []string       `json:"tags"`
 	IsAugment   bool           `json:"isAugment"`
+	Traits      []string       `json:"associatedTraits"`
 	Unique      bool           `json:"unique"`
 }
 
@@ -426,7 +427,21 @@ func compactTFT(raw []byte) ([]byte, error) {
 	if len(items) < 30 {
 		items = pick(func(a string) bool { return strings.HasPrefix(a, "TFT_Item_") })
 	}
+	type augOut struct {
+		APIName string         `json:"apiName"`
+		Name    string         `json:"name"`
+		Desc    string         `json:"desc"`
+		Icon    string         `json:"icon"`
+		Effects map[string]any `json:"effects,omitempty"`
+		Traits  []string       `json:"traits,omitempty"`
+	}
+	var augs []augOut
+	for _, it := range src.Items {
+		if it.IsAugment && it.Name != "" && prefix != "" && strings.HasPrefix(it.APIName, prefix) {
+			augs = append(augs, augOut{it.APIName, it.Name, it.Desc, gameAsset(it.Icon), it.Effects, it.Traits})
+		}
+	}
 	return json.Marshal(map[string]any{
-		"set": setNum, "setName": set.Name, "champions": champs, "traits": traits, "items": items,
+		"set": setNum, "setName": set.Name, "champions": champs, "traits": traits, "items": items, "augments": augs,
 	})
 }

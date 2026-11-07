@@ -419,3 +419,15 @@ body.ovl .tooltip .tt-alts img{width:20px;height:20px}
 .req.r-aug{color:#d9b8ff;border-color:rgba(176,124,255,.55);background:rgba(176,124,255,.12)}
 .req.r-emb{color:#ffd27a;border-color:rgba(232,178,58,.55);background:rgba(232,178,58,.1)}
 .row-chips .req{margin-left:0}
+
+/* augments per comp */
+.aug-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.augc{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:4px 8px 4px 4px;font-size:12.5px;cursor:help;max-width:100%}
+.augc img,.augc .aug-ph{width:26px;height:26px;border-radius:6px;flex:none;background:#000}
+.augc .aug-ph{display:inline-grid;place-items:center;font-size:10px;color:var(--muted);background:var(--card2)}
+.augc .an{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.augc .at{font-size:10.5px;border-radius:4px;padding:0 4px;color:#111;background:var(--gold)}
+.augc.tA .at{background:#7fb2ff}
+.augc.tB .at{background:#9aa3b2}
+.augc.spec{border-color:var(--gold);box-shadow:0 0 0 1px rgba(232,178,58,.25) inset}
+.augc:not(:has(.an)){padding:2px}
