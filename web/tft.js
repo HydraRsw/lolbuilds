@@ -75,18 +75,25 @@ function augInfo(id) {
   const a = T.aug[id];
   return { id, name: a?.name || id.replace(/^[A-Z]+_(\d+_)?/, '').replace(/PlusPlus$/, '++').replace(/Plus$/, '+').replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2'), icon: a?.icon || '', desc: a?.desc || '', effects: a?.effects, traits: a?.traits || [] };
 }
-// MetaTFT cluster with the most similar units (Jaccard), or null.
+// MetaTFT cluster for an OP.GG comp: most similar units (Jaccard), with a bonus when
+// the cluster is named after one of the comp's carries ("AZIR > Blackthorn > ...").
 function compCluster(d) {
   if (d._cl !== undefined) return d._cl;
   const cls = T.augs?.clusters; if (!cls) return null;
   const keys = new Set(d.units.map(u => u.key));
-  let best = null, score = 0;
+  const carries = d.units.filter(u => u.isCore).sort((a, b) => (a.priority ?? 9) - (b.priority ?? 9)).slice(0, 2)
+    .map(u => shortKey(u.key).replace(/\d+/g, '').toUpperCase()).filter(Boolean);
+  let best = null, score = 0, bestJ = 0, bestBonus = false;
   for (const c of Object.values(cls)) {
     const inter = c.units.filter(k => keys.has(k)).length;
     const j = inter / (keys.size + c.units.length - inter);
-    if (j > score) { score = j; best = c; }
+    const head = (c.title || '').split('>')[0].toUpperCase();
+    const tokens = head.split(/[^A-Z']+/).filter(Boolean), flat = head.replace(/[^A-Z]/g, '');
+    const bonus = carries.some(n => n.length >= 4 ? flat.includes(n.replace(/[^A-Z]/g, '')) : tokens.includes(n));
+    const sc = j + (bonus ? 0.25 : 0);
+    if (sc > score) { score = sc; best = c; bestJ = j; bestBonus = bonus; }
   }
-  return (d._cl = score >= 0.4 ? best : null);
+  return (d._cl = (bestBonus && bestJ >= 0.25) || bestJ >= 0.5 ? best : null);
 }
 const AUG_TR = { S: 0, A: 1, B: 2, C: 3, D: 4 };
 const shortKey = k => k.replace(/^[A-Z]+_(\d+_)?|\d+$|_A[DP]$/g, '');
