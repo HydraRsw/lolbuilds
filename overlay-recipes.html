@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>LoLBuilds · Recetas TFT</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  html,body{background:transparent;margin:0;overflow:hidden;width:max-content;min-width:0;min-height:0}
+  body{font-size:12px;user-select:none}
+  #wrap{background:#0d0f14;border:1px solid var(--line2);border-radius:10px;overflow:hidden;width:max-content}
+  .rbar{display:flex;align-items:stretch;height:56px;width:max-content}
+  .grip{flex:none;width:20px;display:grid;place-items:center;color:var(--dim);cursor:move;border-right:1px solid var(--line);font-size:13px;letter-spacing:-1px}
+  .grip:hover{color:var(--text);background:var(--card)}
+  .cell{flex:none;width:54px;display:grid;place-items:center;border-right:1px solid var(--line);cursor:pointer;position:relative}
+  .close{flex:none;width:30px;display:grid;place-items:center;color:var(--muted);cursor:pointer;font-size:14px}
+  .close:hover{color:#fff;background:#7a2a3b}
+  .cell:hover{background:var(--card)}
+  .cell.on{background:rgba(232,178,58,.16);box-shadow:inset 0 -3px 0 var(--gold)}
+  .cell img{width:40px;height:40px;border-radius:7px;background:#0b0d12}
+  .row{display:flex;align-items:stretch;height:56px;border-top:1px solid var(--line)}
+  .row .lead{flex:none;width:20px;display:grid;place-items:center;color:var(--gold);font-weight:800;border-right:1px solid var(--line)}
+  .res{flex:none;width:54px;display:grid;place-items:center;border-right:1px solid var(--line);cursor:pointer;position:relative}
+  .res:last-child{border-right:0}
+  .res:hover,.res.on{background:var(--card2)}
+  .res>img{width:40px;height:40px;border-radius:7px;background:#0b0d12}
+  .res .with{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:4px;border:1px solid var(--line2);background:#0b0d12}
+  .res.need::after{content:"";position:absolute;inset:3px;border:2px solid var(--gold);border-radius:8px;pointer-events:none}
+  .info{border-top:1px solid var(--line);padding:6px 10px;display:flex;align-items:center;gap:8px;white-space:nowrap;max-width:var(--w,520px);overflow:hidden}
+  .info b{font-size:12.5px}
+  .info .k{color:var(--muted)}
+  .info .us{display:flex;gap:2px}
+  .info .us .tu-img{width:22px;height:22px;border-radius:5px;border-width:1px}
+  .info .cmp{color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+  .info .cmp em{font-style:normal;color:var(--text)}
+  .ct #wrap{border-color:var(--teal)}
+  .lb-remote,.lb-remote body{overflow:auto;width:auto}
+  .lb-remote .grip,.lb-remote .close{display:none}
+  .lb-remote #wrap{border-radius:0;border:0}
+</style>
+</head>
+<body>
+<div id="wrap"><div class="inline-load" style="padding:14px 18px"><div class="spinner"></div><span data-i18n>Cargando…</span></div></div>
+<div id="ov" hidden></div>
+<script src="platform.js"></script>
+<script src="i18n.js"></script>
+<script src="overlay-common.js"></script>
+<script src="tft.js"></script>
+<script src="overlay-recipes.js"></script>
+</body>
+</html>
