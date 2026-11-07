@@ -123,7 +123,7 @@ function reqBadges(d) {
     const icon = r.imageUrl || itemInfo(r.key || '').icon;
     const tip = (r.description || '').replace(/<[^>]+>/g, ' ').trim();
     const why = L(reqIsAug(r) ? 'Esta compo solo rinde si consigues este aumento.' : 'Esta compo necesita este emblema para ser buena.');
-    return `<span class="req ${reqIsAug(r) ? 'r-aug' : 'r-emb'}" data-tip="text:${encodeURIComponent(reqLabel(r) + ' — ' + (tip && tip.length > 12 ? tip : why))}">${icon ? `<img src="${esc(icon)}" data-fb="${esc(itemInfo(r.key || '').fb)}" alt="">` : ''}${esc(reqLabel(r))}</span>`;
+    return `<span class="req ${reqIsAug(r) ? 'r-aug' : 'r-emb'}" data-tip="text:${encodeURIComponent(reqLabel(r) + ' — ' + (LANG === 'en' && tip.length > 12 ? tip : why))}">${icon ? `<img src="${esc(icon)}" data-fb="${esc(itemInfo(r.key || '').fb)}" alt="">` : ''}${esc(reqLabel(r))}</span>`;
   }).join('');
 }
 const DIFF = { 1: [L('Fácil'), 'easy'], 2: [L('Media'), 'mid'], 3: [L('Difícil'), 'hard'] };
