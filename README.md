@@ -23,12 +23,18 @@ Windows mostrará un aviso de SmartScreen la primera vez porque el exe no está 
 Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedio; tableros por etapa (inicio, medio y final) con posicionamiento en hexágonos, qué agregar o quitar entre etapas, carries con sus objetos, componentes a priorizar, guía «Cómo jugarla» y botón para copiar el código del Planificador de equipo. 
 
 **Overlay de TFT:** dos ventanas siempre visibles encima del juego (TFT en modo *sin bordes*), sin barra de título: se arrastran desde ⠿ y recuerdan su posición. Se abren solas al empezar una partida de TFT (configurable) o con el botón de la pestaña TFT.
-- **Composiciones** (derecha): muestra 2 compos a la vez (desplázate para ver más; al abrir una crece para mostrar su tablero) con su tablero por etapa, objetos de los carries, componentes y botón para fijar tu compo.
+- **Composiciones** (derecha): muestra 1 compo a la vez con los filtros de tier arriba (desplázate para ver la siguiente; al abrir una crece para mostrar su tablero) con su tablero por etapa, objetos de los carries, componentes y botón para fijar tu compo.
 - **Recetas** (barra horizontal): un componente por casilla; al hacer clic se despliega debajo todo lo que arma con cada otro componente, con estadísticas y en qué compos se usa. Los objetos de tu compo fijada se marcan en dorado.
 - Pasa el mouse sobre un campeón (en el overlay o en la app) para ver sus objetos en esa compo, sus objetos ideales (BIS) y alternativas.
 - Atajos: **Ctrl+Shift+X** ocultar/mostrar las dos ventanas, **Ctrl+Shift+Z** dejar pasar los clics al juego, **Ctrl+Shift+C** ocultar/mostrar solo la barra de recetas (también se cierra con su ✕).
 
 Además: campeones con objetos ideales (BIS), tier list de objetos con recetas, emblemas y artefactos, y sinergias con el rendimiento de cada umbral (MetaTFT).
+
+## Móvil (TFT)
+- **Web (iPhone y Android):** https://hydrarsw.github.io/lolbuilds/ — composiciones meta, tableros por etapa, campeones con objetos ideales, objetos, recetas y sinergias. En iPhone: Compartir → «Agregar a inicio» para tenerla como app.
+- **App de Android con overlay:** [LoLBuilds.apk](https://hydrarsw.github.io/lolbuilds/LoLBuilds.apk). Toca «Abrir / cerrar overlay», da el permiso «Mostrar sobre otras apps» y abre TFT: aparece una burbuja que puedes arrastrar; al tocarla se abre un panel con **Compos** y **Recetas**. Se cierra con su ✕ o desde la notificación.
+- iPhone no permite que una app se muestre encima de otra, por eso allí no hay overlay.
+- Los datos se actualizan solos cada 3 horas (workflow `mobile` de GitHub Actions, rama `gh-pages`). La interfaz de la app Android se carga desde la web, así que las mejoras llegan sin reinstalar.
 
 ## Actualizaciones automáticas
 - **Datos y parches:** cada vez que sale un parche la app lo detecta (revisa cada hora) y descarga las builds, runas y tier lists nuevas sola.
@@ -65,4 +71,5 @@ LoL Builds is a Windows desktop app (Spanish and English) with League of Legends
 - **Language:** follows your Windows language. Change it in Settings → Language. The game data (champion, item, rune and TFT names) switches language too.
 - **League client:** detects champ select, opens your champion, and imports runes, item sets and summoner spells (automatically when you lock in, if enabled).
 - **TFT overlay:** two always-on-top windows (TFT in borderless mode): a comps panel and a horizontal recipe bar. **Ctrl+Shift+X** hides them, **Ctrl+Shift+Z** lets clicks pass through to the game, and **Ctrl+Shift+C** (or the ✕) hides/shows just the recipe bar.
+- **Mobile (TFT):** web version for iPhone and Android at https://hydrarsw.github.io/lolbuilds/ and an Android app with a floating overlay bubble: [LoLBuilds.apk](https://hydrarsw.github.io/lolbuilds/LoLBuilds.apk). iPhone does not allow overlays over other apps.
 - Unofficial app, not endorsed by Riot Games.

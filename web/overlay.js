@@ -54,14 +54,13 @@ function compCard(d) {
     ${body}</div>`;
 }
 
-// Search + tier chips live in the sticky header (rendered once so typing keeps focus).
+// Tier chips live in the header row (rendered once).
 function renderOvTools() {
   const t = $('#ovTools');
   if (!t || t.dataset.ready) return;
   t.dataset.ready = 1;
-  t.innerHTML = `<div class="ov-tools"><input id="ovq" placeholder="${L('Buscar campeón o sinergia…')}" value="${esc(OV.q)}"></div>
-    <div class="chips" id="ovTier">${['ALL', 'OP', 'S', 'A', 'B', 'C'].map(x => `<button data-t="${x}" class="${OV.tier === x ? 'on' : ''}">${x === 'ALL' ? L('Todas') : x}</button>`).join('')}</div>`;
-  $('#ovq').oninput = e => { OV.q = e.target.value; view.scrollTop = 0; renderOvComps(); };
+  // only the tier filters (no search box) to keep the overlay small
+  t.innerHTML = `<div class="chips" id="ovTier">${['ALL', 'OP', 'S', 'A', 'B', 'C'].map(x => `<button data-t="${x}" class="${OV.tier === x ? 'on' : ''}">${x === 'ALL' ? L('Todas') : x}</button>`).join('')}</div>`;
   $('#ovTier').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     OV.tier = b.dataset.t; $$('#ovTier button').forEach(x => x.classList.toggle('on', x === b));
@@ -81,7 +80,7 @@ function renderOvComps() {
   requestAnimationFrame(ovFit);
 }
 
-// Window height: header + exactly 2 comps (the rest scrolls). An opened comp
+// Window height: header + exactly 1 comp (the rest scrolls). An opened comp
 // gets enough room to show its board, up to a cap, and shrinks back when closed.
 const OV_MAX_OPEN = 560;
 function ovFit() {
@@ -90,7 +89,7 @@ function ovFit() {
   const opened = cards.find(c => c.querySelector('.oc-b'));
   let listH;
   if (opened) listH = Math.min(opened.offsetHeight + 20, OV_MAX_OPEN);
-  else listH = cards.slice(0, 2).reduce((s, c) => s + c.offsetHeight + 8, 0) + 12 || 120;
+  else listH = cards.slice(0, 1).reduce((s, c) => s + c.offsetHeight + 8, 0) + 12 || 120;
   const h = top + listH;
   document.documentElement.style.setProperty('--list-h', listH + 'px');
   if (window.ovSize) ovSize(window.innerWidth, h);
