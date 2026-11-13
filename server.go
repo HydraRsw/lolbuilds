@@ -236,6 +236,8 @@ func startServer(addr string) (string, *updater, error) {
 
 	lcu := newLCU()
 	mux.HandleFunc("/api/lcu/state", lcu.handleState)
+	mux.HandleFunc("/api/lcu/diag", lcu.handleDiag)
+	mux.HandleFunc("/api/lcu/tft-history", lcu.handleTFTHistory)
 	mux.HandleFunc("/api/lcu/runes", lcu.handleRunes)
 	mux.HandleFunc("/api/lcu/spells", lcu.handleSpells)
 	mux.HandleFunc("/api/lcu/itemset", lcu.handleItemSet)

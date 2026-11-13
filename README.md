@@ -28,6 +28,14 @@ Pestaña **TFT**: composiciones meta (OP.GG) con tier, Top 4 y posición promedi
 - Pasa el mouse sobre un campeón (en el overlay o en la app) para ver sus objetos en esa compo, sus objetos ideales (BIS) y alternativas.
 - Atajos: **Ctrl+Shift+X** ocultar/mostrar las dos ventanas, **Ctrl+Shift+Z** dejar pasar los clics al juego, **Ctrl+Shift+C** ocultar/mostrar solo la barra de recetas (también se cierra con su ✕).
 
+**Asistente de TFT** (pestaña *Asistente* y en el overlay):
+- **Mis objetos:** marca los componentes que tienes y te ordena las compos que mejor los aprovechan, con los objetos que ya puedes armar.
+- **Aumentos:** escribe los aumentos que te ofrecen y te dice cuál elegir para tu compo fijada (o en general).
+- **Nivel:** cuándo subir de nivel según la compo (reroll o subida rápida), interés, probabilidades de la tienda del Set 18 y calculadora de roleo.
+- **Historial** (app de PC): tus últimas partidas de TFT leídas del cliente.
+
+**Cliente:** detecta el cliente de LoL y el nuevo cliente independiente de TFT (parche 18.6). Si no lo detecta: Ajustes → *Diagnóstico* (y opcionalmente elige la carpeta del cliente).
+
 Además: campeones con objetos ideales (BIS), tier list de objetos con recetas, emblemas y artefactos, y sinergias con el rendimiento de cada umbral (MetaTFT).
 
 ## Móvil (TFT)
@@ -71,5 +79,7 @@ LoL Builds is a Windows desktop app (Spanish and English) with League of Legends
 - **Language:** follows your Windows language. Change it in Settings → Language. The game data (champion, item, rune and TFT names) switches language too.
 - **League client:** detects champ select, opens your champion, and imports runes, item sets and summoner spells (automatically when you lock in, if enabled).
 - **TFT overlay:** two always-on-top windows (TFT in borderless mode): a comps panel and a horizontal recipe bar. **Ctrl+Shift+X** hides them, **Ctrl+Shift+Z** lets clicks pass through to the game, and **Ctrl+Shift+C** (or the ✕) hides/shows just the recipe bar.
+- **TFT assistant:** comps that fit your components, augment picker, leveling plan, shop odds and roll calculator, and your TFT match history (desktop).
+- **Client detection:** works with the League client and the new standalone TFT client; Settings → Diagnostics helps if it is not detected.
 - **Mobile (TFT):** web version for iPhone and Android at https://hydrarsw.github.io/lolbuilds/ and an Android app with a floating overlay bubble: [LoLBuilds.apk](https://hydrarsw.github.io/lolbuilds/LoLBuilds.apk). iPhone does not allow overlays over other apps.
 - Unofficial app, not endorsed by Riot Games.

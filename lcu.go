@@ -19,6 +19,7 @@ type lcu struct {
 	mu       sync.Mutex
 	port     string
 	password string
+	source   string
 	client   *http.Client
 	lastTry  time.Time
 }
@@ -54,18 +55,17 @@ func (l *lcu) connect() bool {
 		return false
 	}
 	l.lastTry = time.Now()
-	for _, p := range lockfileCandidates() {
-		if port, pass, ok := parseLockfile(p); ok {
-			l.port, l.password = port, pass
-			return true
-		}
+	pr := probeClient(1500 * time.Millisecond)
+	if c, ok := l.pickCred(pr.Creds); ok {
+		l.port, l.password, l.source = c.Port, c.Pass, c.Source
+		return true
 	}
 	return false
 }
 
 func (l *lcu) reset() {
 	l.mu.Lock()
-	l.port, l.password = "", ""
+	l.port, l.password, l.source = "", "", ""
 	l.mu.Unlock()
 }
 
@@ -111,16 +111,30 @@ type lcuState struct {
 	GameMode   string `json:"gameMode"`
 	MapID      int    `json:"mapId"`
 	Position   string `json:"position"`
+	TFTGame    bool   `json:"tftGame"` // TFT match window open (new standalone TFT client)
+	Source     string `json:"source,omitempty"`
 }
 
 func (l *lcu) handleState(w http.ResponseWriter, r *http.Request) {
 	st := lcuState{}
 	var phase string
+	st.TFTGame = probeClient(3 * time.Second).TFTGame
 	if _, err := l.do("GET", "/lol-gameflow/v1/gameflow-phase", nil, &phase); err != nil {
+		if st.TFTGame { // no client API, but the TFT match is running
+			st.Phase, st.GameMode, st.MapID = "InProgress", "TFT", 22
+		}
+		l.mu.Lock()
+		if l.port != "" { // answers, but without gameflow (different client API)
+			st.Connected, st.Source = true, l.source
+		}
+		l.mu.Unlock()
 		writeJSON(w, 200, st)
 		return
 	}
 	st.Connected, st.Phase = true, phase
+	l.mu.Lock()
+	st.Source = l.source
+	l.mu.Unlock()
 
 	var flow struct {
 		Map struct {
@@ -146,6 +160,10 @@ func (l *lcu) handleState(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if st.TFTGame && phase != "InProgress" && phase != "ChampSelect" {
+		// standalone TFT client: the match runs outside the League client's gameflow
+		st.Phase, st.GameMode, st.MapID, st.QueueID = "InProgress", "TFT", 22, 0
+	}
 	if phase == "ChampSelect" {
 		var sess struct {
 			LocalPlayerCellID int `json:"localPlayerCellId"`

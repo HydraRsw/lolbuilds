@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"unsafe"
 
 	webview2 "github.com/jchv/go-webview2"
@@ -69,42 +68,73 @@ func openBrowser(u string) {
 	_ = windows.ShellExecute(0, verb, target, nil, nil, windows.SW_SHOWNORMAL)
 }
 
-// lockfileCandidates finds the League client install folder from the running
-// LeagueClientUx.exe / LeagueClient.exe process, plus the usual install paths.
-func lockfileCandidates() []string {
-	var out []string
+// listRiotProcesses lists Riot client processes with their exe path and, for
+// the launcher/lobby processes (never the match itself), their command line.
+func listRiotProcesses(full bool) []procInfo {
+	var out []procInfo
 	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
-	if err == nil {
-		defer windows.CloseHandle(snap)
-		var pe windows.ProcessEntry32
-		pe.Size = uint32(unsafe.Sizeof(pe))
-		for err = windows.Process32First(snap, &pe); err == nil; err = windows.Process32Next(snap, &pe) {
-			name := strings.ToLower(windows.UTF16ToString(pe.ExeFile[:]))
-			if name != "leagueclientux.exe" && name != "leagueclient.exe" {
-				continue
-			}
-			h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pe.ProcessID)
-			if err != nil {
-				continue
-			}
-			buf := make([]uint16, windows.MAX_LONG_PATH)
-			n := uint32(len(buf))
-			if windows.QueryFullProcessImageName(h, 0, &buf[0], &n) == nil {
-				out = append(out, filepath.Join(filepath.Dir(windows.UTF16ToString(buf[:n])), "lockfile"))
-			}
-			windows.CloseHandle(h)
-		}
+	if err != nil {
+		return nil
 	}
-	for _, d := range []string{"C", "D", "E", "F"} {
-		out = append(out,
-			d+`:\Riot Games\League of Legends\lockfile`,
-			d+`:\Program Files\Riot Games\League of Legends\lockfile`,
-			d+`:\Juegos\Riot Games\League of Legends\lockfile`,
-			d+`:\Games\Riot Games\League of Legends\lockfile`,
-		)
+	defer windows.CloseHandle(snap)
+	var pe windows.ProcessEntry32
+	pe.Size = uint32(unsafe.Sizeof(pe))
+	for err = windows.Process32First(snap, &pe); err == nil; err = windows.Process32Next(snap, &pe) {
+		name := windows.UTF16ToString(pe.ExeFile[:])
+		tft, lol := isGameProcess(name)
+		// full scan (diagnostics): also processes with generic names living in a Riot folder
+		if !tft && !lol && !interesting(name, "") && !full {
+			continue
+		}
+		p := procInfo{Name: name}
+		if tft || lol {
+			out = append(out, p) // the match: name only, we don't touch the process
+			continue
+		}
+		h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pe.ProcessID)
+		if err != nil {
+			if interesting(name, "") {
+				out = append(out, p)
+			}
+			continue
+		}
+		buf := make([]uint16, windows.MAX_LONG_PATH)
+		n := uint32(len(buf))
+		if windows.QueryFullProcessImageName(h, 0, &buf[0], &n) == nil {
+			p.Path = windows.UTF16ToString(buf[:n])
+		}
+		if interesting(name, p.Path) {
+			p.cmdline = processCmdline(h)
+			out = append(out, p)
+		}
+		windows.CloseHandle(h)
 	}
 	return out
 }
+
+// processCmdline reads a process command line (Windows 8.1+), which only needs
+// PROCESS_QUERY_LIMITED_INFORMATION — the same access Task Manager uses.
+func processCmdline(h windows.Handle) string {
+	var need uint32
+	buf := make([]byte, 8192)
+	for i := 0; i < 2; i++ {
+		err := windows.NtQueryInformationProcess(h, windows.ProcessCommandLineInformation, unsafe.Pointer(&buf[0]), uint32(len(buf)), &need)
+		if err == nil {
+			us := (*windows.NTUnicodeString)(unsafe.Pointer(&buf[0]))
+			if us.Buffer == nil || us.Length == 0 {
+				return ""
+			}
+			return windows.UTF16ToString(unsafe.Slice(us.Buffer, us.Length/2))
+		}
+		if need <= uint32(len(buf)) || need > 1<<20 {
+			return ""
+		}
+		buf = make([]byte, need)
+	}
+	return ""
+}
+
+func extraLockfiles() []string { return nil }
 
 // restartSelf launches the (possibly just updated) executable and exits.
 func restartSelf() {

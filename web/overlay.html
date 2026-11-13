@@ -10,7 +10,7 @@
   body{font-size:13px;display:flex;flex-direction:column}
   .ov-top{flex:none;z-index:20;background:rgba(13,15,20,.97);border-bottom:1px solid var(--line);padding:8px 10px 0}
   .ov-top{cursor:move;user-select:none}
-  .lb-remote .ov-hint,.lb-remote .grip{display:none}
+  .lb-remote .ov-keys,.lb-remote .grip{display:none}
   .lb-remote .ov-top{cursor:default}
   .ov-title{display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:4px}
   .grip{color:var(--dim);letter-spacing:-1px}
@@ -25,7 +25,11 @@
   #ovTools{cursor:default;margin-left:auto}
   #ovTools .chips{margin:0;flex-wrap:nowrap}
   #ovTools .chips button{padding:3px 8px}
-  .ov-hint{margin-bottom:5px}
+  .ov-hint{margin-bottom:0;align-items:center}
+  .ov-tabs{display:flex;gap:0;flex:1}
+  .ov-tabs button{flex:1;padding:6px 2px 7px;font-size:12px;cursor:pointer}
+  .ov-keys{color:var(--dim);font-size:14px;cursor:help;padding:0 2px}
+  .tt-ov{padding:2px 0 8px}
   .ov-tools{display:flex;gap:6px;margin-bottom:8px}
   .ov-tools input{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--text);outline:0}
   .chips{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
@@ -86,7 +90,7 @@
 <body>
 <div class="ov-top" onmousedown="ovDragStart(event)">
   <div class="ov-title"><span class="grip">⠿</span><b>TFT</b><div id="ovTools"></div><span class="ct-badge" data-i18n>Clics atraviesan</span></div>
-  <div class="ov-hint"><span><b>Ctrl+Shift</b> + <b>X</b> <span data-i18n>ocultar</span> · <b>Z</b> <span data-i18n>atravesar clics</span> · <b>C</b> <span data-i18n>recetas</span></span></div>
+  <div class="ov-hint"><div class="ov-tabs" id="ovTabs"></div><span class="ov-keys" data-tipkeys>⌨</span></div>
 </div>
 <div id="ov"><div class="inline-load"><div class="spinner"></div><span data-i18n>Cargando…</span></div></div>
 <div class="tooltip" id="tooltip"></div>
@@ -95,6 +99,7 @@
 <script src="i18n.js"></script>
 <script src="overlay-common.js"></script>
 <script src="tft.js"></script>
+<script src="tft-tools.js"></script>
 <script src="overlay.js"></script>
 </body>
 </html>

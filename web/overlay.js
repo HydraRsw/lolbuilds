@@ -90,7 +90,8 @@ function ovFit() {
   const cards = $$('#ov .oc');
   const opened = cards.find(c => c.querySelector('.oc-b'));
   let listH;
-  if (opened) listH = Math.min(opened.offsetHeight + 20, OV_MAX_OPEN);
+  if (OV.tab !== 'comps') listH = Math.min(Math.max(($('#ov > .tt-ov')?.offsetHeight || 0) + 20, 160), OV_MAX_OPEN);
+  else if (opened) listH = Math.min(opened.offsetHeight + 20, OV_MAX_OPEN);
   else listH = cards.slice(0, 1).reduce((s, c) => s + c.offsetHeight + 8, 0) + 12 || 120;
   const h = top + listH;
   document.documentElement.style.setProperty('--list-h', listH + 'px');
@@ -101,9 +102,37 @@ function ovFit() {
 function ovOpenComp(id) { OV.open = OV.open === id ? null : id; renderOv(); }
 
 /* ---------- shell ---------- */
-function renderOv() { renderOvComps(); }
+const OV_TABS = [['comps', 'Compos'], ['items', 'Mis objetos'], ['augs', 'Aumentos'], ['level', 'Nivel']];
+function renderOvTabs() {
+  const t = $('#ovTabs');
+  if (!t) return;
+  t.innerHTML = OV_TABS.map(([k, l]) => `<button data-ovtab="${k}" class="${OV.tab === k ? 'on' : ''}">${L(l)}</button>`).join('');
+  const keys = $('[data-tipkeys]');
+  if (keys) keys.dataset.tip = 'text:' + encodeURIComponent(`Ctrl+Shift+X ${L('ocultar')} · Ctrl+Shift+Z ${L('atravesar clics')} · Ctrl+Shift+C ${L('recetas')}`);
+  $('#ovTools').style.display = OV.tab === 'comps' ? '' : 'none';
+}
+function renderOv() {
+  renderOvTabs();
+  if (OV.tab === 'comps') return renderOvComps();
+  const q = $('#ttAugQ')?.value || '';
+  view.innerHTML = ovToolHTML(OV.tab, OV.pin);
+  if (OV.tab === 'augs') { augsToolWire(view, renderOv); if (q && $('#ttAugQ') && !$('#ttAugQ').disabled) { $('#ttAugQ').value = q; $('#ttAugSug').innerHTML = augSuggest(q); } }
+  if (OV.tab === 'level') levelToolWire(view, renderOv);
+  requestAnimationFrame(ovFit);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-ovtab]');
+  if (!b) return;
+  OV.tab = b.dataset.ovtab; view.scrollTop = 0; renderOv();
+  if (OV.tab === 'augs') setTimeout(() => $('#ttAugQ')?.focus(), 0);
+});
+view.addEventListener('contextmenu', e => { if (OV.tab === 'items') itemsToolRemove(e, renderOv); });
 window.ovGo = h => { if (h.startsWith('#/tft/comp/')) ovOpenComp(h.split('/').pop()); };
 view.addEventListener('click', async e => {
+  if (OV.tab === 'items' && itemsToolClick(e, renderOv)) return;
+  if (OV.tab === 'augs' && augsToolClick(e, renderOv)) return;
+  const op = e.target.closest('[data-open]');
+  if (op && OV.tab !== 'comps') { OV.tab = 'comps'; OV.open = op.dataset.open; renderOv(); return; }
   const st = e.target.closest('[data-stage]');
   if (st) { const id = st.closest('.oc').dataset.id; OV.stage[id] = +st.dataset.stage; renderOv(); return; }
   const pin = e.target.closest('[data-pin]');
@@ -121,8 +150,8 @@ document.body.classList.add('ovl');
   } catch (e) { view.innerHTML = errorBox(e); return; }
   renderOv();
   ovSave(); // share the pinned comp with the recipe bar
-  tftLoadAugs().then(() => { if (OV.open) renderOv(); }).catch(() => { });
+  tftLoadAugs().then(() => { if (OV.open || OV.tab === 'augs') renderOv(); }).catch(() => { });
   tftLoadStats().catch(() => { }); // BIS items and averages for the champion tooltips
   // pick up new comps (OP.GG refresh) every 30 min without reopening the overlay
-  setInterval(async () => { tftCompsP = null; tftAugsP = null; tftLoadAugs().catch(() => { }); try { await tftLoadComps(); if (OV.tab === 'comps' && !document.activeElement?.matches('input')) renderOv(); } catch { } }, 30 * 60 * 1000);
+  setInterval(async () => { tftCompsP = null; tftAugsP = null; tftLoadAugs().catch(() => { }); try { await tftLoadComps(); if (!document.activeElement?.matches('input')) renderOv(); } catch { } }, 30 * 60 * 1000);
 })();

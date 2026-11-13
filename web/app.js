@@ -868,7 +868,7 @@ async function toggleOverlay() {
 }
 function tftOverlayAuto(s) {
   if (!settings.autoOverlay) return;
-  const inTft = s.connected && s.phase === 'InProgress' && modeOf(s) === 'tft';
+  const inTft = (s.tftGame || (s.connected && s.phase === 'InProgress' && modeOf(s) === 'tft'));
   if (inTft && !ovAutoOpened) {
     ovAutoOpened = true;
     overlayCall('open').then(() => toast('Partida de TFT detectada: overlay abierto (Ctrl+Shift+X para ocultarlo)')).catch(() => { });
@@ -878,7 +878,7 @@ function tftOverlayAuto(s) {
   }
 }
 const LCU_POS = { top: 'TOP', jungle: 'JUNGLE', middle: 'MID', bottom: 'ADC', utility: 'SUPPORT' };
-const PHASES = { None: L('En el cliente'), Lobby: L('En sala'), Matchmaking: L('Buscando partida'), ReadyCheck: L('Partida encontrada'), ChampSelect: L('Selección de campeón'), InProgress: L('En partida'), WaitingForStats: L('Fin de partida'), EndOfGame: L('Fin de partida'), PreEndOfGame: L('Fin de partida') };
+const PHASES = { GameStart: L('En partida'), Reconnect: L('En partida'), None: L('En el cliente'), Lobby: L('En sala'), Matchmaking: L('Buscando partida'), ReadyCheck: L('Partida encontrada'), ChampSelect: L('Selección de campeón'), InProgress: L('En partida'), WaitingForStats: L('Fin de partida'), EndOfGame: L('Fin de partida'), PreEndOfGame: L('Fin de partida') };
 
 async function pollLCU() {
   try {
@@ -886,8 +886,8 @@ async function pollLCU() {
     const was = lcuState.connected;
     lcuState = s;
     const pill = $('#lcuPill');
-    pill.className = 'lcu' + (s.connected ? (s.phase === 'ChampSelect' ? ' select' : ' on') : '');
-    let txt = s.connected ? (PHASES[s.phase] || L('Cliente conectado')) : L('Cliente no detectado');
+    pill.className = 'lcu' + (s.connected || s.tftGame ? (s.phase === 'ChampSelect' ? ' select' : ' on') : '');
+    let txt = s.connected ? (PHASES[s.phase] || L('Cliente conectado')) : s.tftGame ? L('En partida de TFT') : L('Cliente no detectado');
     if (s.phase === 'ChampSelect' && s.championId && S.byKey[s.championId]) txt += ' · ' + S.byKey[s.championId].name;
     pill.querySelector('span').textContent = txt;
     if (was !== s.connected && location.hash.startsWith('#/champ/')) route(); // show/hide import buttons
@@ -915,6 +915,13 @@ async function pollLCU() {
 }
 
 /* ---------------- settings modal ---------------- */
+async function drawClientStatus() {
+  try {
+    const s = await (await fetch('/api/lcu/state')).json();
+    $('#cliStatus').textContent = s.connected ? `✔ ${L('Cliente detectado')}${s.phase ? ' · ' + (PHASES[s.phase] || s.phase) : ''}`
+      : s.tftGame ? `✔ ${L('Partida de TFT detectada (sin API del cliente)')}` : `✖ ${L('Cliente no detectado')}`;
+  } catch { }
+}
 function initSettings() {
   $('#setRegion').innerHTML = REGIONS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
   $('#setTier').innerHTML = TIERS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
@@ -924,7 +931,31 @@ function initSettings() {
     $('#setAutoOpen').checked = settings.autoOpen; $('#setAutoRunes').checked = settings.autoRunes; $('#setAutoItems').checked = settings.autoItems; $('#setAutoSpells').checked = settings.autoSpells; $('#setAutoOverlay').checked = settings.autoOverlay;
     m.hidden = false;
     drawVersion();
+    drawClientStatus();
+    fetch('/api/prefs').then(r => r.json()).then(p => { $('#setClientDir').value = p.clientDir || ''; }).catch(() => { });
   };
+  $('#setClientDir').onchange = async e => {
+    try { await fetch('/api/prefs?clientDir=' + encodeURIComponent(e.target.value.trim()), { method: 'POST' }); } catch { }
+    setTimeout(drawClientStatus, 2500);
+  };
+  $('#cliDiag').onclick = async () => {
+    $('#cliOut').hidden = false; $('#cliPre').textContent = L('Buscando el cliente…');
+    try {
+      const d = await (await fetch('/api/lcu/diag')).json();
+      const lines = [
+        `${L('Conectado con')}: ${d.chosen || '—'}`,
+        `${L('Partida de TFT abierta')}: ${d.tftGame ? L('sí') : L('no')} · ${L('Partida de LoL abierta')}: ${d.lolGame ? L('sí') : L('no')}`,
+        `${L('Procesos de Riot')}:`, ...(d.processes || []).map(p => `  ${p.name}${p.path ? '  ' + p.path : ''}`),
+        `lockfiles:`, ...(d.lockfiles || []).map(x => '  ' + x),
+        `${L('Candidatos')}: ${(d.candidates || []).map(c => c.source + ' :' + c.port).join(' | ') || '—'}`,
+        `Riot Client: ${(d.sessions || []).join(' | ') || '—'}`,
+        ...(d.notes || []),
+      ];
+      $('#cliPre').textContent = lines.join('\n');
+    } catch (e) { $('#cliPre').textContent = String(e); }
+    drawClientStatus();
+  };
+  $('#cliCopy').onclick = async () => { try { await navigator.clipboard.writeText($('#cliPre').textContent); toast('Copiado ✔'); } catch { } };
   $('#checkUpdate').onclick = async () => {
     $('#verLabel').textContent = L('Buscando actualizaciones…');
     await fetch('/api/update/check', { method: 'POST' }).catch(() => { });

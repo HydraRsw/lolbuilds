@@ -58,6 +58,12 @@
     <label class="check"><input type="checkbox" id="setAutoSpells"> <span data-i18n>Hechizos de invocador</span></label>
     <p class="sub" data-i18n>TFT:</p>
     <label class="check"><input type="checkbox" id="setAutoOverlay"> <span data-i18n>Abrir el overlay automáticamente al empezar una partida de TFT</span></label>
+    <p class="sub" data-i18n>Cliente de LoL / TFT:</p>
+    <div class="cli-row"><span id="cliStatus" class="muted"></span><button class="btn ghost sm" id="cliDiag" data-i18n>Diagnóstico</button></div>
+    <label><span data-i18n>Carpeta del cliente (solo si no lo detecta)</span>
+      <input id="setClientDir" placeholder="C:\Riot Games\Teamfight Tactics" spellcheck="false">
+    </label>
+    <div id="cliOut" hidden><pre id="cliPre"></pre><button class="btn ghost sm" id="cliCopy" data-i18n>Copiar diagnóstico</button></div>
     <div class="modal-actions">
       <button class="btn ghost" id="refreshData" data-i18n>Actualizar datos</button>
       <button class="btn" id="closeSettings" data-i18n>Listo</button>
@@ -70,5 +76,6 @@
 <script src="i18n.js"></script>
 <script src="app.js"></script>
 <script src="tft.js"></script>
+<script src="tft-tools.js"></script>
 </body>
 </html>

@@ -16,8 +16,8 @@ import (
 var overlayKinds = map[string]string{"comps": "overlay.html", "recipes": "overlay-recipes.html"}
 
 type overlayState struct {
-	V         int  `json:"v"`
-	Visible   bool `json:"visible"`
+	V         int    `json:"v"`
+	Visible   bool   `json:"visible"`
 	ClickThru bool   `json:"clickThru"`
 	Pin       string `json:"pin"` // comp pinned in the comps window (highlighted in the recipe bar)
 	// recipe bar closed with its ✕ or Ctrl+Shift+C (the comps window stays)

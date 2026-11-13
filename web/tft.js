@@ -273,7 +273,8 @@ function tftTip(kind, key) {
 
 /* ---------- page shell ---------- */
 function tftShell(active, inner) {
-  const tabs = [['comps', L('Composiciones'), '#/tft'], ['champs', L('Campeones'), '#/tft/champs'], ['items', L('Objetos'), '#/tft/items'], ['traits', L('Sinergias'), '#/tft/traits']];
+  const tabs = [['comps', L('Composiciones'), '#/tft'], ['tools', L('Asistente'), '#/tft/tools'], ['champs', L('Campeones'), '#/tft/champs'], ['items', L('Objetos'), '#/tft/items'], ['traits', L('Sinergias'), '#/tft/traits']];
+  if (typeof toggleOverlay === 'function' && !window.LB_MOBILE_APP) tabs.push(['history', L('Historial'), '#/tft/history']);
   return `<div class="tft-top"><h1>TFT${T.st ? ` <span class="dim">· Set ${T.st.set}</span>` : ''}</h1>
     <div class="seg">${tabs.map(([k, l, h]) => `<button class="${k === active ? 'on' : ''}" onclick="go('${h}')">${l}</button>`).join('')}</div>
     ${typeof toggleOverlay === 'function' ? `<button class="btn" style="margin-left:auto" onclick="toggleOverlay()" title="${L('Ventana siempre visible encima del juego (TFT en modo sin bordes)')}">${L('Abrir / cerrar overlay')}</button>` : ''}</div>${inner}`;
@@ -291,6 +292,8 @@ async function renderTFT(t, parts) {
   if (sub === 'champ') return renderTChamp(t, decodeURIComponent(arg || ''));
   if (sub === 'items') return renderTItems(t);
   if (sub === 'traits') return renderTTraits(t);
+  if (sub === 'tools') return renderTTools(t);
+  if (sub === 'history') return renderTHistory(t);
   return renderComps(t);
 }
 
