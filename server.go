@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -83,16 +84,26 @@ func (p *proxy) cached(key string, ttl time.Duration, force, keepInMem bool, pro
 				return e.body, nil
 			}
 		}
-		if st, err := os.Stat(p.keyPath(key)); err == nil && time.Since(st.ModTime()) < ttl {
+		if st, err := os.Stat(p.keyPath(key)); err == nil {
 			if b, err := os.ReadFile(p.keyPath(key)); err == nil {
-				if keepInMem {
-					p.mem.Store(key, memEntry{b, st.ModTime()})
+				if time.Since(st.ModTime()) < ttl {
+					if keepInMem {
+						p.mem.Store(key, memEntry{b, st.ModTime()})
+					}
+					return b, nil
 				}
+				// Expired: answer right away with the old copy and refresh in the
+				// background, so the app and the overlay never wait on the network.
+				go func() { _, _ = p.refresh(key, keepInMem, produce) }()
 				return b, nil
 			}
 		}
 	}
+	return p.refresh(key, keepInMem, produce)
+}
 
+// refresh runs produce once per key at a time (concurrent callers share it).
+func (p *proxy) refresh(key string, keepInMem bool, produce func() ([]byte, error)) ([]byte, error) {
 	type result struct {
 		b   []byte
 		err error
@@ -117,6 +128,40 @@ func (p *proxy) cached(key string, ttl time.Duration, force, keepInMem bool, pro
 	}
 	ch <- result{b, err}
 	return b, err
+}
+
+// Images (champion, item, trait and augment icons) are kept on disk for a month,
+// so boards draw instantly instead of waiting on CommunityDragon every time.
+var imageHosts = map[string]bool{
+	"raw.communitydragon.org": true, "ddragon.leagueoflegends.com": true, "c-tft-api.op.gg": true,
+	"opgg-static.akamaized.net": true, "cdn.metatft.com": true,
+}
+
+func (p *proxy) handleImage(w http.ResponseWriter, r *http.Request) {
+	raw := r.URL.Query().Get("u")
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" {
+		http.Error(w, "bad url", 400)
+		return
+	}
+	if !imageHosts[u.Host] {
+		http.Redirect(w, r, raw, http.StatusFound)
+		return
+	}
+	b, err := p.cached("img:"+raw, 30*24*time.Hour, false, false, func() ([]byte, error) {
+		b, err := p.download(raw, map[string]string{"Accept": "image/avif,image/webp,image/png,image/*;q=0.8"})
+		if err == nil && !strings.HasPrefix(http.DetectContentType(b), "image/") {
+			return nil, fmt.Errorf("not an image")
+		}
+		return b, err
+	})
+	if err != nil {
+		http.Redirect(w, r, raw, http.StatusFound) // let the browser try directly
+		return
+	}
+	w.Header().Set("Content-Type", http.DetectContentType(b))
+	w.Header().Set("Cache-Control", "public, max-age=604800")
+	_, _ = w.Write(b)
 }
 
 func (p *proxy) fetch(raw string, ttl time.Duration, force bool) ([]byte, error) {
@@ -228,6 +273,7 @@ func startServer(addr string) (string, *updater, error) {
 	mux := http.NewServeMux()
 	mux.Handle("/", noCache(up.uiHandler()))
 	mux.Handle("/p", p)
+	mux.HandleFunc("/img", p.handleImage)
 
 	t := &tftService{p: p}
 	mux.HandleFunc("/api/tft/comps", t.handleComps)

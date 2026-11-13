@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -37,10 +38,19 @@ func (t *tftService) handleComps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *tftService) produceComps() ([]byte, error) {
+	// the MCP list is the fallback and also the donor of early/mid boards: fetch it alongside
+	type mcpRes struct {
+		d   []map[string]any
+		err error
+	}
+	mcpCh := make(chan mcpRes, 1)
+	go func() { d, err := t.compsFromMCP(); mcpCh <- mcpRes{d, err} }()
+	mcp := sync.OnceValue(func() mcpRes { return <-mcpCh })
 	decks, err := t.compsFromPage()
 	source := "op.gg"
 	if err != nil || len(decks) == 0 {
-		decks2, err2 := t.compsFromMCP()
+		m := mcp()
+		decks2, err2 := m.d, m.err
 		if err2 != nil || len(decks2) == 0 {
 			if err == nil {
 				err = err2
@@ -54,8 +64,8 @@ func (t *tftService) produceComps() ([]byte, error) {
 	} else if len(decks) > 0 && decks[0]["requirements"] != nil {
 		// new page format: no early/mid boards, borrow them from the MCP list
 		source = "op.gg-v2"
-		if donors, err := t.compsFromMCP(); err == nil && len(donors) > 0 {
-			mergeBoards(decks, donors)
+		if m := mcp(); m.err == nil && len(m.d) > 0 {
+			mergeBoards(decks, m.d)
 		}
 	}
 	for _, d := range decks {
@@ -101,15 +111,26 @@ func (t *tftService) compsFromPage() ([]map[string]any, error) {
 		return nil, nil
 	}
 	setNames(byID, "es_MX", byID)
-	// names come localized: take Spanish and English from each language's page
-	for _, lp := range []struct{ lang, url, al string }{
+	// names come localized: take Spanish and English from each language's page (in parallel)
+	pages := []struct{ lang, url, al string }{
 		{"es_MX", "https://op.gg/es/tft/meta-trends/comps", "es-MX,es;q=0.9"},
 		{"en_US", "https://op.gg/en/tft/meta-trends/comps", "en-US,en;q=0.9"},
-	} {
-		if b, err := t.p.download(lp.url, map[string]string{"Accept": "text/html", "Accept-Language": lp.al}); err == nil {
-			if _, other := compsV2(b); len(other) > 0 {
-				setNames(byID, lp.lang, other)
+	}
+	res := make([]map[string]map[string]any, len(pages))
+	var wg sync.WaitGroup
+	for i, lp := range pages {
+		wg.Add(1)
+		go func(i int, url, al string) {
+			defer wg.Done()
+			if b, err := t.p.download(url, map[string]string{"Accept": "text/html", "Accept-Language": al}); err == nil {
+				_, res[i] = compsV2(b)
 			}
+		}(i, lp.url, lp.al)
+	}
+	wg.Wait()
+	for i, lp := range pages {
+		if len(res[i]) > 0 {
+			setNames(byID, lp.lang, res[i])
 		}
 	}
 	for _, d := range list {

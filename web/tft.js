@@ -13,10 +13,14 @@ async function tftJSON(path, fresh) {
   if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
 }
+// In the desktop app (and its overlay) icons go through the local disk cache.
+const LOCAL_IMG = /^(127\.0\.0\.1|localhost)$/.test(location.hostname) && !window.LB_MOBILE_APP;
+const IMG = u => (LOCAL_IMG && typeof u === 'string' && u.startsWith('https://')) ? '/img?u=' + encodeURIComponent(u) : u;
 let tftStaticP = null, tftCompsP = null, tftStatsP = null, tftAugsP = null;
 function tftLoadStatic() {
   return tftStaticP ??= tftJSON('/api/tft/static?lang=' + DATA_LOC.cd, Date.now() < S.freshUntil).then(st => {
     T.st = st;
+    for (const x of [...st.champions, ...st.traits, ...st.items, ...(st.augments || [])]) if (x.icon) x.icon = IMG(x.icon);
     for (const c of st.champions) { T.champ[c.apiName] = c; T.champByName[c.name] = c; }
     for (const t of st.traits) { T.trait[t.apiName] = t; T.traitByName[t.name] = t; }
     for (const i of st.items) T.item[i.apiName] = i;
@@ -27,7 +31,7 @@ function tftLoadStatic() {
 function tftLoadComps() {
   return tftCompsP ??= tftJSON('/api/tft/comps', Date.now() < S.freshUntil).then(j => {
     T.comps = j.decks || [];
-    for (const d of T.comps) for (const u of d.units || []) if (u.meta) T.metaUnit[u.key] = u.meta;
+    for (const d of T.comps) for (const u of d.units || []) if (u.meta) { u.meta.imageUrl = IMG(u.meta.imageUrl); T.metaUnit[u.key] = u.meta; }
     for (const d of T.comps) fillMissingBoards(d, T.comps);
     return T.comps;
   }).catch(e => { tftCompsP = null; throw e; });
@@ -164,7 +168,7 @@ function unitInfo(key) {
 }
 function itemInfo(key) {
   const i = T.item[key];
-  return { key, name: i?.name || key.replace(/^[A-Z]+_(\d+_)?/, '').replace(/([a-z])([A-Z])/g, '$1 $2'), icon: i?.icon || `https://c-tft-api.op.gg/img/set/${T.st?.set || 18}/tft-item/${key}.png`, fb: `https://c-tft-api.op.gg/img/set/${T.st?.set || 18}/tft-item/${key}.png`, comp: i?.composition || [] };
+  return { key, name: i?.name || key.replace(/^[A-Z]+_(\d+_)?/, '').replace(/([a-z])([A-Z])/g, '$1 $2'), icon: i?.icon || IMG(`https://c-tft-api.op.gg/img/set/${T.st?.set || 18}/tft-item/${key}.png`), fb: IMG(`https://c-tft-api.op.gg/img/set/${T.st?.set || 18}/tft-item/${key}.png`), comp: i?.composition || [] };
 }
 function traitInfo(key, metaName) {
   const t = T.trait[key];
@@ -194,7 +198,7 @@ const reqIsAug = r => /augment/i.test(r.type || '') || /augment/i.test(r.key || 
 const reqLabel = r => L(reqIsAug(r) ? 'Solo con {name}' : 'Requiere {name}', { name: reqName(r) });
 function reqBadges(d) {
   return (d.requirements || []).map(r => {
-    const icon = r.imageUrl || itemInfo(r.key || '').icon;
+    const icon = IMG(r.imageUrl) || itemInfo(r.key || '').icon;
     const tip = (r.description || '').replace(/<[^>]+>/g, ' ').trim();
     const why = L(reqIsAug(r) ? 'Esta compo solo rinde si consigues este aumento.' : 'Esta compo necesita este emblema para ser buena.');
     return `<span class="req ${reqIsAug(r) ? 'r-aug' : 'r-emb'}" data-tip="text:${encodeURIComponent(reqLabel(r) + ' — ' + (LANG === 'en' && tip.length > 12 ? tip : why))}">${icon ? `<img src="${esc(icon)}" data-fb="${esc(itemInfo(r.key || '').fb)}" alt="">` : ''}${esc(reqLabel(r))}</span>`;
@@ -204,12 +208,14 @@ const DIFF = { 1: [L('Fácil'), 'easy'], 2: [L('Media'), 'mid'], 3: [L('Difícil
 const TIER_CLS = t => ({ OP: 't-OP', S: 't-S', A: 't-A', B: 't-B', C: 't-C', D: 't-D' }[t] || 't-C');
 
 /* desc cleanup: CommunityDragon text has @Var@ placeholders and %i:icon% tokens */
+// stat icons inside game descriptions (%i:scaleAD%) shown as short words
+const STAT_ICON = { scalead: 'daño de ataque', scaleap: 'poder de habilidad', scalehealth: 'Vida', scaleas: 'velocidad de ataque', scalearmor: 'Armadura', scalemr: 'Resistencia mágica', scalemana: 'Maná', scalecrit: 'prob. de crítico', scalecritmult: 'daño crítico', scaledr: 'reducción de daño', scaleomnivamp: 'omnivampirismo', scalesv: 'omnivampirismo', scaledamageamp: 'amplificación de daño', scalerange: 'alcance', scaleshield: 'escudo', scalehealing: 'curación', scalemanaregen: 'regeneración de maná', scalegold: 'oro' };
 function tftDesc(desc, vars = {}, rowsMin = []) {
   if (!desc) return '';
   let row = 0;
   const lower = {};
   for (const [k, v] of Object.entries(vars || {})) lower[k.toLowerCase()] = v;
-  let s = String(desc).replace(/%i:[A-Za-z]+%/g, '').replace(/\\n|\r/g, '');
+  let s = String(desc).replace(/%i:([A-Za-z]+)%/g, (_, k) => STAT_ICON[k.toLowerCase()] ? ' ' + L(STAT_ICON[k.toLowerCase()]) : '').replace(/\\n|\r/g, '');
   s = s.replace(/@([^@]+)@/g, (_, expr) => {
     const [name, mul] = expr.split('*');
     if (/^minunits$/i.test(name)) return rowsMin[row++] ?? '';
@@ -228,7 +234,7 @@ function tftDesc(desc, vars = {}, rowsMin = []) {
 function traitDesc(t) {
   if (!t?.desc) return '';
   const parts = String(t.desc).split(/<row>/i);
-  return parts.map((p, i) => i === 0 ? tftDesc(p) : tftDesc(p, t.effects?.[i - 1]?.variables || {}, [t.effects?.[i - 1]?.minUnits ?? ''])).filter(Boolean).join('<br>');
+  return parts.map((p, i) => i === 0 ? tftDesc(p, t.effects?.[0]?.variables || {}) : tftDesc(p, t.effects?.[i - 1]?.variables || {}, [t.effects?.[i - 1]?.minUnits ?? ''])).filter(Boolean).join('<br>');
 }
 
 /* tooltips (called from app.js tipHTML) */
@@ -369,7 +375,7 @@ function board(units, { items = true, deck = '' } = {}) {
     if (!u) return `<div class="hex empty" style="left:${p.left}px;top:${p.top}px"></div>`;
     const key = u.key || u.characterId, info = unitInfo(key), its = (u.items || []).filter(Boolean);
     return `<a class="hex ${COST_CLS(info.cost)} ${u.isCore ? 'carry' : ''}" style="left:${p.left}px;top:${p.top}px" href="#/tft/champ/${encodeURIComponent(key)}" data-tip="${unitTip(key, deck)}">
-      <span class="hexin"><img src="${info.icon || ph(info.name)}" data-fb="${info.fb}" alt="${esc(info.name)}"></span>
+      <span class="hexin"><img style="background:#1e222c url('${ph(info.name)}') center/cover" src="${info.icon || ph(info.name)}" data-fb="${info.fb}" alt="${esc(info.name)}"></span>
       ${u.tier > 1 ? `<span class="stars s${u.tier}">${'★'.repeat(u.tier)}</span>` : ''}
       ${items && its.length ? `<span class="hex-items">${its.map(i => tItemImg(i, 'ti xs')).join('')}</span>` : ''}</a>`;
   }).join('')}</div>`;
