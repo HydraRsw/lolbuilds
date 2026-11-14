@@ -201,6 +201,7 @@ const EN = {
   'curación': 'Healing',
   'regeneración de maná': 'Mana Regen',
   'oro': 'gold',
+  'Tableros más jugados en cada nivel según OP.GG (pestaña «Progresión»).': 'Most played boards at each level according to OP.GG ("Progression" tab).',
   'Solo con {name}': 'Only with {name}', 'Requiere {name}': 'Requires {name}', 'Requisito': 'Requirement',
   'Esta compo solo rinde si consigues este aumento.': 'This comp only performs if you get this augment.',
   'Esta compo necesita este emblema para ser buena.': 'This comp needs this emblem to be good.',

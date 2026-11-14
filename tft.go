@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"sort"
@@ -29,7 +30,7 @@ var nextChunkRe = regexp.MustCompile(`self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)
 
 func (t *tftService) handleComps(w http.ResponseWriter, r *http.Request) {
 	force := r.URL.Query().Get("fresh") == "1"
-	b, err := t.p.cached("tft:comps:v2", 2*time.Hour, force, true, t.produceComps)
+	b, err := t.p.cached("tft:comps:v3", 2*time.Hour, force, true, t.produceComps)
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -64,8 +65,14 @@ func (t *tftService) produceComps() ([]byte, error) {
 	} else if len(decks) > 0 && decks[0]["requirements"] != nil {
 		// new page format: no early/mid boards, borrow them from the MCP list
 		source = "op.gg-v2"
-		if m := mcp(); m.err == nil && len(m.d) > 0 {
-			mergeBoards(decks, m.d)
+		var noLevels []map[string]any
+		for _, d := range decks {
+			if d["levels"] == nil {
+				noLevels = append(noLevels, d)
+			}
+		}
+		if m := mcp(); m.err == nil && len(m.d) > 0 && len(noLevels) > 0 {
+			mergeBoards(noLevels, m.d)
 		}
 	}
 	for _, d := range decks {
@@ -135,6 +142,12 @@ func (t *tftService) compsFromPage() ([]map[string]any, error) {
 	}
 	for _, d := range list {
 		cleanupV2(d)
+	}
+	// real boards per level (OP.GG "Progresión")
+	if n, err := t.addBuildUps(html, list); err != nil {
+		log.Printf("op.gg build-up: %v", err)
+	} else {
+		log.Printf("op.gg build-up: %d/%d comps", n, len(list))
 	}
 	return list, nil
 }

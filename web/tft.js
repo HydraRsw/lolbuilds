@@ -41,7 +41,7 @@ function tftLoadComps() {
 const TANK_ITEM = /Warmog|Gargoyle|SpiritVisage|DragonsClaw|Bramble|Sunfire|Redemption|ProtectorsVow|AdaptiveHelm|Crownguard|Evenshroud|SteadfastHeart|Titans|Thiefs/i;
 function fillMissingBoards(d, all) {
   const noCells = d.units.some(u => !u.cell);
-  const noEarly = !d.early?.units?.length, noMid = !d.middle?.units?.length;
+  const noEarly = !d.early?.units?.length && !d.levels?.length, noMid = !d.middle?.units?.length && !d.levels?.length;
   if (!noCells && !noEarly && !noMid) return;
   const keys = new Set(d.units.map(u => u.key));
   let donor = null, best = 0;
@@ -388,10 +388,7 @@ async function renderComp(t, id) {
   const d = decks.find(x => x.id === id);
   if (!d) { view.innerHTML = tftShell('comps', errorBox('Composición no encontrada (puede que el meta haya cambiado).')); return; }
   const s = d.stat?.deck || {}, diff = DIFF[badgeVal(d, 'difficulty')];
-  const stages = [];
-  if (d.early?.units?.length) stages.push({ k: 'early', l: LANG === 'en' ? 'Early' : 'Inicio', lvl: d.early.level, units: d.early.units, traits: d.early.traits, st: d.early });
-  if (d.middle?.units?.length) stages.push({ k: 'mid', l: L('Medio'), lvl: d.middle.level, units: d.middle.units, traits: d.middle.traits, st: d.middle });
-  stages.push({ k: 'final', l: L('Final'), lvl: Math.max(d.units.length, 8), units: d.units, traits: d.traits, st: null });
+  const stages = compStages(d);
   let cur = stages.length - 1;
   const keyOf = u => u.key || u.characterId;
 
@@ -406,7 +403,7 @@ async function renderComp(t, id) {
     const keys = new Set(sg.units.map(keyOf)), pkeys = new Set((prev?.units || []).map(keyOf));
     const added = prev ? [...keys].filter(k => !pkeys.has(k)) : [];
     const removed = prev ? [...pkeys].filter(k => !keys.has(k)) : [];
-    const roundWr = sg.st && (sg.st.win + sg.st.lose) ? sg.st.win / (sg.st.win + sg.st.lose) : null;
+    const roundWr = sg.st?.winRate != null && sg.st.play ? sg.st.winRate : sg.st && (sg.st.win + sg.st.lose) ? sg.st.win / (sg.st.win + sg.st.lose) : null;
     $('#stageBody').innerHTML = `
       <div class="stage-grid">
         <div>${board(sg.units, { items: sg.k === 'final', deck: d.id })}
@@ -441,8 +438,9 @@ async function renderComp(t, id) {
     </div>
     <div class="card" style="margin-bottom:14px">
       <h3>${L('Tableros por etapa')} <small>${L('posicionamiento recomendado')}</small></h3>
-      ${d._boardsFrom || d._autoPos ? `<p class="fine" style="margin:-4px 0 12px">${L('OP.GG no publica tableros para esta compo: ')}${d._boardsFrom ? L('inicio y medio tomados de la compo similar «{name}»', { name: esc(d._boardsFrom) }) : ''}${d._boardsFrom && d._autoPos ? '; ' : ''}${d._autoPos ? L('la posición final es aproximada (tanques adelante, carries atrás)') : ''}.</p>` : ''}
-      <div class="seg" id="stageTabs" style="margin-bottom:14px">${stages.map((g, i) => `<button data-i="${i}">${g.l} · ${L('Nivel')} ${g.lvl}</button>`).join('')}</div>
+      ${d.levels?.length ? `<p class="fine" style="margin:-4px 0 12px">${L('Tableros más jugados en cada nivel según OP.GG (pestaña «Progresión»).')}</p>` : ''}
+      ${!d.levels?.length && (d._boardsFrom || d._autoPos) ? `<p class="fine" style="margin:-4px 0 12px">${L('OP.GG no publica tableros para esta compo: ')}${d._boardsFrom ? L('inicio y medio tomados de la compo similar «{name}»', { name: esc(d._boardsFrom) }) : ''}${d._boardsFrom && d._autoPos ? '; ' : ''}${d._autoPos ? L('la posición final es aproximada (tanques adelante, carries atrás)') : ''}.</p>` : ''}
+      <div class="seg" id="stageTabs" style="margin-bottom:14px">${stages.map((g, i) => `<button data-i="${i}">${g.lv ? g.l : `${g.l} · ${L('Nivel')} ${g.lvl}`}</button>`).join('')}</div>
       <div id="stageBody"></div>
     </div>
     <div class="card" style="margin-bottom:14px"><h3>${L('Aumentos recomendados')}</h3><div id="augBox">${augSection(d)}</div></div>
@@ -471,10 +469,25 @@ function bisFor(key, exclude = []) {
   return list.filter(x => !exclude.includes(x)).slice(0, 3);
 }
 
+// Stages of a comp: OP.GG boards per level when available (levels 4..9), else the
+// early/mid boards; the final board always last.
+function compStages(d) {
+  const st = [];
+  if (d.levels?.length) {
+    for (const b of d.levels) {
+      st.push({ k: 'L' + b.level, lv: b.level, l: `${L('Nv.')} ${b.level}`, lvl: b.level, units: b.units, traits: b.traits, st: { play: b.play, winRate: b.winRate } });
+    }
+  } else {
+    if (d.early?.units?.length) st.push({ k: 'early', l: LANG === 'en' ? 'Early' : 'Inicio', lvl: d.early.level, units: d.early.units, traits: d.early.traits, st: d.early });
+    if (d.middle?.units?.length) st.push({ k: 'mid', l: L('Medio'), lvl: d.middle.level, units: d.middle.units, traits: d.middle.traits, st: d.middle });
+  }
+  st.push({ k: 'final', l: L('Final'), lvl: Math.max(d.units.length, 8), units: d.units, traits: d.traits, st: null });
+  return st;
+}
 function gamePlan(d, stages, carries, compList) {
   const name = k => esc(unitInfo(k).name);
   const keyOf = u => u.key || u.characterId;
-  const early = stages.find(s => s.k === 'early'), mid = stages.find(s => s.k === 'mid'), fin = stages.at(-1);
+  const early = stages.find(s => s.k === 'early') || stages.find(s => s.lv === 5) || stages.find(s => s.lv === 4), mid = stages.find(s => s.k === 'mid') || stages.find(s => s.lv === 7) || stages.find(s => s.lv === 6), fin = stages.at(-1);
   const r = badgeVal(d, 'reroll');
   const threes = d.units.filter(u => u.tier >= 3).map(u => u.key);
   const bigCarries = carries.filter(u => unitInfo(u.key).cost >= 4).map(u => u.key);

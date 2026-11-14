@@ -27,10 +27,7 @@ function compCard(d) {
   const units = [...d.units].sort((a, b) => unitInfo(a.key).cost - unitInfo(b.key).cost);
   let body = '';
   if (open) {
-    const stages = [];
-    if (d.early?.units?.length) stages.push(['early', `${LANG === 'en' ? 'Early' : 'Inicio'} · ${d.early.level}`, d.early.units]);
-    if (d.middle?.units?.length) stages.push(['mid', `${L('Medio')} · ${d.middle.level}`, d.middle.units]);
-    stages.push(['final', L('Final'), d.units]);
+    const stages = compStages(d).map(g => [g.k, g.lv ? `${L('Nv.')}${g.lv}` : (g.k === 'final' ? L('Final') : `${g.l} · ${g.lvl}`), g.units]);
     const cur = OV.stage[d.id] ?? stages.length - 1;
     const st = stages[Math.min(cur, stages.length - 1)];
     const carries = d.units.filter(u => u.isCore).sort((a, b) => (a.priority ?? 9) - (b.priority ?? 9));

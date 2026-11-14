@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -207,6 +208,35 @@ func (p *proxy) download(raw string, hdr map[string]string) ([]byte, error) {
 		return b, nil
 	}
 	return nil, lastErr
+}
+
+// post sends a POST (OP.GG server actions) through the same mock/headers logic.
+func (p *proxy) post(raw string, body []byte, hdr map[string]string) ([]byte, error) {
+	target := raw
+	if p.mock != "" {
+		u, _ := url.Parse(raw)
+		target = strings.TrimRight(p.mock, "/") + "/" + u.Host + u.Path
+	}
+	req, _ := http.NewRequest("POST", target, bytes.NewReader(body))
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+	req.Header.Set("Origin", "https://op.gg")
+	req.Header.Set("Referer", raw)
+	for k, v := range hdr {
+		req.Header.Set(k, v)
+	}
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, &httpError{resp.StatusCode, string(trunc(b, 300))}
+	}
+	return b, nil
 }
 
 type httpError struct {

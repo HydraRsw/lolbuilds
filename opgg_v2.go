@@ -25,8 +25,13 @@ func parseRSC(html []byte) rsc {
 			stream.WriteString(s)
 		}
 	}
+	return rowsFromStream(stream.String())
+}
+
+// rowsFromStream parses "<hex id>:<json>" lines (page streams and server action replies).
+func rowsFromStream(stream string) rsc {
 	rows := rsc{}
-	for _, line := range strings.Split(stream.String(), "\n") {
+	for _, line := range strings.Split(stream, "\n") {
 		m := rscRowRe.FindStringSubmatch(line)
 		if m == nil || m[2] == "" || !strings.ContainsAny(m[2][:1], "[{\"") {
 			continue
