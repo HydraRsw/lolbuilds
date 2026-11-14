@@ -1,0 +1,9 @@
+{
+ "version": "1.9.1",
+ "ui": "1.9.1",
+ "exe": "1.9.1",
+ "minExe": "1.8.1",
+ "notes": "TFT: tableros por nivel de OP.GG en todas las compos (reintentos).",
+ "uiSha256": "100e59d356eb95481d60cad99fd68c0e837cd1d728eae27909425287d0409347",
+ "exeSha256": "5b05e87334224d5fae4096f7ef3b7a7dea6afaacf9a21fc2dadc5be3e35d0873"
+}
