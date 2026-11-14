@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -21,7 +22,7 @@ var (
 	buildUpMu     sync.Mutex
 	buildUpID     string
 	buildUpIDAt   time.Time
-	buildUpTimout = 40 * time.Second
+	buildUpTimout = 90 * time.Second
 )
 
 func (t *tftService) buildUpActionID(html []byte) (string, error) {
@@ -209,6 +210,13 @@ func (t *tftService) addBuildUps(html []byte, decks []map[string]any) (int, erro
 				return
 			}
 			lv, err := t.fetchBuildUp(id, str(d["id"]), gen, region, window)
+			for try := 0; err != nil && try < 2 && time.Now().Before(deadline); try++ {
+				time.Sleep(time.Duration(800*(try+1)) * time.Millisecond)
+				lv, err = t.fetchBuildUp(id, str(d["id"]), gen, region, window)
+			}
+			if err != nil {
+				log.Printf("op.gg build-up %s: %v", str(d["id"]), err)
+			}
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {

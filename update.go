@@ -26,7 +26,7 @@ var webFS embed.FS
 
 // appVersion is the version of this executable (Go backend + embedded UI).
 // Overridden at build time with -ldflags "-X main.appVersion=1.2.3".
-var appVersion = "1.9.0"
+var appVersion = "1.9.1"
 
 // Updates are published on the "updates" branch of the GitHub repo:
 //
