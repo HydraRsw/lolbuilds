@@ -511,3 +511,62 @@ body.ovl .tooltip .tt-alts img{width:20px;height:20px}
 .hist-u .tu{width:46px}
 @media (max-width:760px){.hist-row{grid-template-columns:70px 1fr}.hu{grid-column:1/-1}}
 .ver-row #verLabel{min-width:0;overflow-wrap:anywhere}
+
+/* OP.GG comp guide */
+.gv-list{display:flex;flex-direction:column;gap:8px}
+.gv{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.gv.base{border-color:rgba(160,120,255,.5)}
+.gv-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:12.5px}
+.gv.base .gv-h>b{color:#b79bff}
+.gv-st{font-size:12px;color:var(--muted);white-space:nowrap}.gv-st b{color:var(--text)}
+.gv-u{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
+.gv-unit{position:relative}
+.gv-unit .tu{width:46px}
+.gv-unit i{position:absolute;top:-2px;right:2px;font-style:normal;font-size:8.5px;font-weight:800;background:#111;color:#fff;border:1px solid var(--line2);border-radius:3px;padding:0 2px;z-index:2}
+.gv-unit.var .tu-img{border-style:dashed}
+.gv-plus{color:var(--gold);font-weight:800;margin-right:2px}
+.gs-list{display:flex;flex-wrap:wrap;gap:6px}
+.gs{display:inline-flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:3px 8px 3px 3px;font-size:12px;cursor:help}
+.gs .tu-img{width:28px;height:28px}
+.gt{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px}
+.gt-c{display:flex;flex-direction:column;gap:3px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px}
+.gt-c b{font-size:13px}
+.gt-s{color:#58a6ff;font-weight:700}.gt-r{color:var(--gold);font-weight:700}
+table.gp{width:100%;border-collapse:collapse;font-size:12.5px}
+table.gp th{color:var(--muted);font-weight:600;text-align:left;padding:6px;border-bottom:1px solid var(--line)}
+table.gp td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.gp .tu{width:56px}
+.gp-bar{position:relative;width:70px;height:18px;background:var(--bg2);border-radius:5px;overflow:hidden}
+.gp-bar span{position:absolute;left:0;top:0;bottom:0;background:rgba(232,178,58,.35)}
+.gp-bar b{position:relative;padding-left:6px;font-size:11.5px;line-height:18px}
+.gp-i{display:inline-flex;flex-direction:column;align-items:center;margin-right:4px}
+.gp-i small{font-size:10px;color:var(--teal, #3dd6b0);font-weight:700}
+.gp-i.opt small{color:var(--muted)}
+.oc-b .gt{grid-template-columns:repeat(4,1fr);gap:4px}
+.oc-b .gt-c{padding:5px 6px;font-size:11px}.oc-b .gt-c b{font-size:11.5px}
+.oc-b .gv{padding:5px 7px}.oc-b .gv-unit .tu{width:34px}.oc-b .gv-unit .tu-img{width:30px;height:30px}
+@media (max-width:760px){table.gp th:nth-child(5),table.gp td:nth-child(5){display:none}}
+
+/* items stats (tactics.tools style) */
+.ti-tools{flex-wrap:wrap;gap:10px}
+.ti-cats{display:flex;flex-wrap:wrap;gap:4px}
+.ti-cats button{background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:5px 10px;font-weight:650;font-size:12.5px;cursor:pointer}
+.ti-cats button.on{color:var(--text);border-color:var(--gold);background:rgba(232,178,58,.1)}
+.ti-q{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text);min-width:180px;margin-left:auto}
+.ti-table th.sortable{cursor:pointer;user-select:none}
+.ti-table th.sortable:hover{color:var(--text)}
+.ti-row{cursor:pointer}
+.ti-row:hover td{background:rgba(255,255,255,.02)}
+.ti-row.open td{background:rgba(232,178,58,.06)}
+.ti-detail td{background:var(--bg2);padding:12px 14px}
+.ti-det{display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:18px}
+.ti-det h4{margin:0 0 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.ti-users{display:flex;flex-wrap:wrap;gap:6px}
+.ti-u{display:flex;flex-direction:column;align-items:center}
+.ti-u small{font-size:10.5px;color:var(--muted)}
+.ti-comp{display:flex;align-items:center;gap:7px;padding:4px 0;color:var(--text);text-decoration:none;font-size:12.5px}
+.ti-comp:hover span:not(.tier){text-decoration:underline}
+.ti-comp small{margin-left:auto;color:var(--muted)}
+.ti-comp .tier{min-width:24px;height:20px;font-size:11px}
+.ti-desc{font-size:12.5px;line-height:1.5;margin:0;color:var(--muted)}
+@media (max-width:760px){.ti-det{grid-template-columns:1fr}.ti-table th:nth-child(3),.ti-table td:nth-child(3),.ti-table th:nth-child(8),.ti-table td:nth-child(8){display:none}.ti-q{margin-left:0;flex:1}}

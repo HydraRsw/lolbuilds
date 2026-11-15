@@ -18,18 +18,19 @@ import (
 
 var (
 	scriptSrcRe   = regexp.MustCompile(`<script[^>]+src="([^"]+/_next/static/chunks/[^"]+\.js)"`)
-	buildUpIDRe   = regexp.MustCompile(`"([0-9a-f]{40,44})",\w+\.callServer,void 0,\w+\.findSourceMapURL,"getTftCompBuildUpAction"`)
-	buildUpMu     sync.Mutex
-	buildUpID     string
-	buildUpIDAt   time.Time
-	buildUpTimout = 90 * time.Second
+	actionRe      = regexp.MustCompile(`"([0-9a-f]{40,44})",\w+\.callServer,void 0,\w+\.findSourceMapURL,"(getTftComp\w+Action)"`)
+	actionMu      sync.Mutex
+	actionIDs     map[string]string
+	actionIDsAt   time.Time
+	buildUpTimout = 120 * time.Second
 )
 
-func (t *tftService) buildUpActionID(html []byte) (string, error) {
-	buildUpMu.Lock()
-	defer buildUpMu.Unlock()
-	if buildUpID != "" && time.Since(buildUpIDAt) < 6*time.Hour {
-		return buildUpID, nil
+// opggActions finds the ids of OP.GG's comp server actions in their scripts.
+func (t *tftService) opggActions(html []byte) (map[string]string, error) {
+	actionMu.Lock()
+	defer actionMu.Unlock()
+	if actionIDs["getTftCompBuildUpAction"] != "" && time.Since(actionIDsAt) < 6*time.Hour {
+		return actionIDs, nil
 	}
 	srcs := scriptSrcRe.FindAllSubmatch(html, -1)
 	// the comps code is usually in one of the last chunks: search from the end
@@ -42,12 +43,40 @@ func (t *tftService) buildUpActionID(html []byte) (string, error) {
 		if err != nil {
 			continue
 		}
-		if m := buildUpIDRe.FindSubmatch(b); m != nil {
-			buildUpID, buildUpIDAt = string(m[1]), time.Now()
-			return buildUpID, nil
+		if ms := actionRe.FindAllSubmatch(b, -1); len(ms) > 0 {
+			ids := map[string]string{}
+			for _, m := range ms {
+				ids[string(m[2])] = string(m[1])
+			}
+			if ids["getTftCompBuildUpAction"] != "" {
+				actionIDs, actionIDsAt = ids, time.Now()
+				return ids, nil
+			}
 		}
 	}
-	return "", fmt.Errorf("getTftCompBuildUpAction not found in %d scripts", len(srcs))
+	return nil, fmt.Errorf("OP.GG comp actions not found in %d scripts", len(srcs))
+}
+
+// callAction posts to an OP.GG server action and returns its parsed reply rows
+// and the "data" object of the result.
+func (t *tftService) callAction(id string, arg map[string]any) (rsc, map[string]any, error) {
+	body, _ := json.Marshal([]any{arg})
+	b, err := t.p.post(opggCompsURL, body, map[string]string{
+		"Next-Action": id, "Accept": "text/x-component", "Content-Type": "text/plain;charset=UTF-8",
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	r := rowsFromStream(string(b))
+	for _, row := range r {
+		if m, ok := row.(map[string]any); ok && m["data"] != nil {
+			if m["ok"] != true {
+				return nil, nil, fmt.Errorf("action not ok")
+			}
+			return r, mapOf(m["data"]), nil
+		}
+	}
+	return nil, nil, fmt.Errorf("unexpected action reply")
 }
 
 // pageGeneration finds {"filters":{...},"generation":{...}} in the comps page.
@@ -104,25 +133,10 @@ type lvlBoard struct {
 }
 
 func (t *tftService) fetchBuildUp(actionID, deckID string, gen map[string]any, region string, window any) ([]lvlBoard, error) {
-	arg := []any{map[string]any{"deckId": deckID, "generation": gen, "region": region, "window": window, "locale": "en"}}
-	body, _ := json.Marshal(arg)
-	b, err := t.p.post(opggCompsURL, body, map[string]string{
-		"Next-Action": actionID, "Accept": "text/x-component", "Content-Type": "text/plain;charset=UTF-8",
-	})
+	r, data, err := t.callAction(actionID, map[string]any{"deckId": deckID, "generation": gen, "region": region, "window": window, "locale": "en"})
 	if err != nil {
 		return nil, err
 	}
-	r := rowsFromStream(string(b))
-	var res map[string]any
-	for _, row := range r {
-		if m, ok := row.(map[string]any); ok && m["data"] != nil {
-			res = m
-		}
-	}
-	if res == nil || res["ok"] != true {
-		return nil, fmt.Errorf("unexpected build-up reply")
-	}
-	data := mapOf(res["data"])
 	byLevel := map[int][]lvlBoard{}
 	for _, bv := range asList(r.val(data["boards"])) {
 		bd := mapOf(r.val(bv))
@@ -184,10 +198,11 @@ func (t *tftService) fetchBuildUp(actionID, deckID string, gen map[string]any, r
 
 // addBuildUps fills d["levels"] for every deck (6 at a time, bounded in time).
 func (t *tftService) addBuildUps(html []byte, decks []map[string]any) (int, error) {
-	id, err := t.buildUpActionID(html)
+	ids, err := t.opggActions(html)
 	if err != nil {
 		return 0, err
 	}
+	id, detailID := ids["getTftCompBuildUpAction"], ids["getTftCompDetailAction"]
 	gen, region, window := pageGeneration(parseRSC(html))
 	if gen == nil {
 		return 0, fmt.Errorf("generation not found")
@@ -227,14 +242,27 @@ func (t *tftService) addBuildUps(html []byte, decks []map[string]any) (int, erro
 				fillFinalCells(d, lv)
 				ok++
 			}
+			mu.Unlock()
+			if detailID != "" {
+				g, err := t.fetchGuide(detailID, str(d["id"]), gen, region, window)
+				if err != nil {
+					log.Printf("op.gg detail %s: %v", str(d["id"]), err)
+				}
+				mu.Lock()
+				if g != nil {
+					d["guide"] = g
+				}
+			} else {
+				mu.Lock()
+			}
 		}()
 	}
 	wg.Wait()
 	if ok == 0 && lastErr != nil {
 		// the action id may have changed: look it up again next time
-		buildUpMu.Lock()
-		buildUpID = ""
-		buildUpMu.Unlock()
+		actionMu.Lock()
+		actionIDs = nil
+		actionMu.Unlock()
 		return 0, lastErr
 	}
 	return ok, nil

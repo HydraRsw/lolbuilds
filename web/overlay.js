@@ -38,6 +38,9 @@ function compCard(d) {
       <div class="stg">${stages.map((x, i) => `<button data-stage="${i}" class="${i === cur ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
       <div class="mini-board">${board(st[2], { items: st[0] === 'final', deck: d.id })}</div>
       ${(() => { const r = T.augs && compAugs(d); return r ? `<h5>${L('Aumentos perfectos')}</h5><div class="aug-list">${r.perfect.map(x => augChip(x, d.id)).join('')}</div>${r.options.length ? `<h5>${L('Otras opciones')}</h5><div class="aug-list">${r.options.slice(0, 8).map(x => augChip(x, d.id, true)).join('')}</div>` : ''}` : ''; })()}
+      ${d.guide?.timeline?.length ? `<h5>${L('Subida de nivel')}</h5>${guideTimelineHTML(d)}` : ''}
+      ${d.guide?.variants?.length > 1 ? `<h5>${L('Variantes')}</h5>${guideVariantsHTML(d, true)}` : ''}
+      ${d.guide?.situational?.length ? `<h5>${L('Situacionales')}</h5>${guideSituHTML(d)}` : ''}
       <h5>${L('Objetos de los carries')}</h5>
       ${carries.map(u => `<div class="ci">${tUnitImg(u.key, 'xs', d.id)}<b style="font-size:12px">${esc(unitInfo(u.key).name)}</b><span class="rec">${u.items.map(it => tItemImg(it)).join('')}</span></div>`).join('')}
       ${Object.keys(comp).length ? `<h5>${L('Componentes')}</h5><div class="comp-needed">${Object.entries(comp).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span>${tItemImg(c, 'ti sm')}<b>×${n}</b></span>`).join('')}</div>` : ''}

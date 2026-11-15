@@ -17,7 +17,11 @@ import (
 
 // tftService provides TFT meta comps (OP.GG) and the current set's static data
 // (CommunityDragon, Spanish), both cached on disk.
-type tftService struct{ p *proxy }
+type tftService struct {
+	p        *proxy
+	catMu    sync.Mutex
+	itemCats map[string]string // OP.GG item categories (core, emblem, artifact, radiant, support, ...)
+}
 
 const (
 	opggCompsURL = "https://op.gg/tft/meta-trends/comps"
@@ -78,7 +82,10 @@ func (t *tftService) produceComps() ([]byte, error) {
 	for _, d := range decks {
 		slimDeck(d)
 	}
-	return json.Marshal(map[string]any{"decks": decks, "source": source, "fetchedAt": time.Now().Format(time.RFC3339)})
+	t.catMu.Lock()
+	cats := t.itemCats
+	t.catMu.Unlock()
+	return json.Marshal(map[string]any{"decks": decks, "source": source, "itemCats": cats, "fetchedAt": time.Now().Format(time.RFC3339)})
 }
 
 // compsFromPage reads the deck list OP.GG embeds in its comps page.
@@ -147,6 +154,11 @@ func (t *tftService) compsFromPage() ([]map[string]any, error) {
 		}
 	}
 	html = best
+	if cats := pageItemCats(parseRSC(html)); len(cats) > 0 {
+		t.catMu.Lock()
+		t.itemCats = cats
+		t.catMu.Unlock()
+	}
 	list, byID := compsV2(html)
 	if len(list) == 0 {
 		return nil, nil

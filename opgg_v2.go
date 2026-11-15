@@ -347,3 +347,40 @@ func jsonKey(v any) string {
 	b, _ := json.Marshal(v)
 	return string(b)
 }
+
+// pageItemCats reads the item list of the comps page: key -> category.
+func pageItemCats(r rsc) map[string]string {
+	out := map[string]string{}
+	var walk func(v any, depth int)
+	walk = func(v any, depth int) {
+		if depth > 30 || len(out) > 0 {
+			return
+		}
+		switch x := v.(type) {
+		case map[string]any:
+			if arr, ok := x["items"].([]any); ok && len(arr) > 20 {
+				if first, ok := arr[0].(map[string]any); ok && first["category"] != nil && first["key"] != nil {
+					for _, iv := range arr {
+						if it, ok := r.val(iv).(map[string]any); ok {
+							if k, c := str(it["key"]), str(it["category"]); k != "" && c != "" {
+								out[k] = c
+							}
+						}
+					}
+					return
+				}
+			}
+			for _, c := range x {
+				walk(c, depth+1)
+			}
+		case []any:
+			for _, c := range x {
+				walk(c, depth+1)
+			}
+		}
+	}
+	for _, row := range r {
+		walk(row, 0)
+	}
+	return out
+}
