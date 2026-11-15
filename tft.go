@@ -12,16 +12,21 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 // tftService provides TFT meta comps (OP.GG) and the current set's static data
 // (CommunityDragon, Spanish), both cached on disk.
 type tftService struct {
-	p        *proxy
-	catMu    sync.Mutex
-	itemCats map[string]string // OP.GG item categories (core, emblem, artifact, radiant, support, ...)
+	p         *proxy
+	catMu     sync.Mutex
+	itemCats  map[string]string // OP.GG item categories (core, emblem, artifact, radiant, support, ...)
+	upgrading atomic.Bool
 }
+
+// compsSchema marks comps lists that include the OP.GG guide (variants, leveling...).
+const compsSchema = `"schema":3`
 
 const (
 	opggCompsURL = "https://op.gg/tft/meta-trends/comps"
@@ -38,6 +43,14 @@ func (t *tftService) handleComps(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeErr(w, err)
 		return
+	}
+	// a cached list made by an older version lacks newer fields (OP.GG guide):
+	// serve it now and rebuild it in the background right away
+	if !force && !bytes.Contains(b, []byte(compsSchema)) && t.upgrading.CompareAndSwap(false, true) {
+		go func() {
+			defer t.upgrading.Store(false)
+			_, _ = t.p.refresh("tft:comps:v3", true, t.produceComps)
+		}()
 	}
 	writeRawJSON(w, b)
 }
@@ -85,7 +98,7 @@ func (t *tftService) produceComps() ([]byte, error) {
 	t.catMu.Lock()
 	cats := t.itemCats
 	t.catMu.Unlock()
-	return json.Marshal(map[string]any{"decks": decks, "source": source, "itemCats": cats, "fetchedAt": time.Now().Format(time.RFC3339)})
+	return json.Marshal(map[string]any{"schema": 3, "decks": decks, "source": source, "itemCats": cats, "fetchedAt": time.Now().Format(time.RFC3339)})
 }
 
 // compsFromPage reads the deck list OP.GG embeds in its comps page.

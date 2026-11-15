@@ -16,6 +16,7 @@ async function tftJSON(path, fresh) {
 // In the desktop app (and its overlay) icons go through the local disk cache.
 const LOCAL_IMG = /^(127\.0\.0\.1|localhost)$/.test(location.hostname) && !window.LB_MOBILE_APP;
 const IMG = u => (LOCAL_IMG && typeof u === 'string' && u.startsWith('https://')) ? '/img?u=' + encodeURIComponent(u) : u;
+let tftUpgradeTries = 0;
 let tftStaticP = null, tftCompsP = null, tftStatsP = null, tftAugsP = null;
 function tftLoadStatic() {
   return tftStaticP ??= tftJSON('/api/tft/static?lang=' + DATA_LOC.cd, Date.now() < S.freshUntil).then(st => {
@@ -34,6 +35,13 @@ function tftLoadComps() {
     T.itemCats = j.itemCats || {};
     for (const d of T.comps) for (const u of d.units || []) if (u.meta) { u.meta.imageUrl = IMG(u.meta.imageUrl); T.metaUnit[u.key] = u.meta; }
     for (const d of T.comps) fillMissingBoards(d, T.comps);
+    // list cached by an older version: the app rebuilds it in the background; fetch it again shortly
+    if ((j.schema || 0) < 3 && j.source !== 'op.gg-mcp' && !window.LB_MOBILE_APP && (tftUpgradeTries = (tftUpgradeTries || 0) + 1) <= 8) {
+      setTimeout(async () => {
+        tftCompsP = null;
+        try { const c = await tftLoadComps(); if (c.some(d => d.guide) && /^#\/tft/.test(location.hash) && typeof route === 'function') route(); else if (c.some(d => d.guide) && typeof renderOv === 'function') renderOv(); } catch { }
+      }, 30000);
+    }
     return T.comps;
   }).catch(e => { tftCompsP = null; throw e; });
 }
