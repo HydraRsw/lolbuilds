@@ -172,8 +172,7 @@ func (t *tftService) fetchBuildUp(actionID, deckID string, gen map[string]any, r
 	}
 	var out []lvlBoard
 	for lv, list := range byLevel {
-		// OP.GG shows the most played board of each level first
-		sort.SliceStable(list, func(i, j int) bool { return list[i].Play > list[j].Play })
+		// OP.GG shows the first board it sends for each level (its own ranking)
 		best := list[0]
 		best.Alts = len(list) - 1
 		out = append(out, best)

@@ -112,37 +112,58 @@ func (t *tftService) compsFromPage() ([]map[string]any, error) {
 	if len(out) > 0 {
 		return out, nil
 	}
-	// format v2 (RSC references, localized strings)
-	list, byID := compsV2(html)
-	if len(list) == 0 {
-		return nil, nil
-	}
-	setNames(byID, "es_MX", byID)
-	// names come localized: take Spanish and English from each language's page (in parallel)
+	// format v2 (RSC references, localized strings). The Spanish and English
+	// pages are fetched too (names) and the one with the newest data generation
+	// is used: the bare URL is sometimes served from an older CDN copy.
 	pages := []struct{ lang, url, al string }{
 		{"es_MX", "https://op.gg/es/tft/meta-trends/comps", "es-MX,es;q=0.9"},
 		{"en_US", "https://op.gg/en/tft/meta-trends/comps", "en-US,en;q=0.9"},
 	}
-	res := make([]map[string]map[string]any, len(pages))
+	htmls := make([][]byte, len(pages))
 	var wg sync.WaitGroup
 	for i, lp := range pages {
 		wg.Add(1)
 		go func(i int, url, al string) {
 			defer wg.Done()
 			if b, err := t.p.download(url, map[string]string{"Accept": "text/html", "Accept-Language": al}); err == nil {
-				_, res[i] = compsV2(b)
+				htmls[i] = b
 			}
 		}(i, lp.url, lp.al)
 	}
 	wg.Wait()
+	runOf := func(b []byte) string {
+		if b == nil {
+			return ""
+		}
+		g, _, _ := pageGeneration(parseRSC(b))
+		return str(g["runId"])
+	}
+	best, bestRun := html, runOf(html)
+	for _, b := range htmls {
+		if r := runOf(b); r > bestRun {
+			if l, _ := compsV2(b); len(l) > 0 {
+				best, bestRun = b, r
+			}
+		}
+	}
+	html = best
+	list, byID := compsV2(html)
+	if len(list) == 0 {
+		return nil, nil
+	}
+	setNames(byID, "es_MX", byID)
 	for i, lp := range pages {
-		if len(res[i]) > 0 {
-			setNames(byID, lp.lang, res[i])
+		if htmls[i] == nil {
+			continue
+		}
+		if _, other := compsV2(htmls[i]); len(other) > 0 {
+			setNames(byID, lp.lang, other)
 		}
 	}
 	for _, d := range list {
 		cleanupV2(d)
 	}
+	log.Printf("op.gg comps: generation %s, %d comps", bestRun, len(list))
 	// real boards per level (OP.GG "Progresión")
 	if n, err := t.addBuildUps(html, list); err != nil {
 		log.Printf("op.gg build-up: %v", err)
