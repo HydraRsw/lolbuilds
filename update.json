@@ -1,0 +1,9 @@
+{
+ "version": "1.10.1",
+ "ui": "1.10.1",
+ "exe": "1.10.1",
+ "minExe": "1.10.1",
+ "notes": "TFT: si ten\u00edas guardada una lista de compos de una versi\u00f3n anterior, se reconstruye sola para mostrar variantes, situacionales, subida de nivel y prioridad de objetos.",
+ "uiSha256": "52654e845847bc3c2e259529bdfd1ec78e7b4f8368fc04a882aba48d52cb4175",
+ "exeSha256": "c1726345d3d3a88c8c0f93dd6c0de5f66db5efafe0dfacb8b397b0b5a57ada31"
+}
