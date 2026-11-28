@@ -1,0 +1,15 @@
+2026/11/28 07:57:20 op.gg comps: generation 20261128T045739Z, 46 comps
+2026/11/28 07:57:42 op.gg build-up: 46/46 comps
+{
+ "files": {
+  "mt-items.json": "ok 13167 bytes",
+  "mt-traits.json": "ok 7934 bytes",
+  "mt-uip.json": "ok 127818 bytes",
+  "mt-units.json": "ok 5910 bytes",
+  "tft-augs.json": "ok 93851 bytes",
+  "tft-comps.json": "ok 1288071 bytes",
+  "tft-static-en_us.json": "ok 314476 bytes",
+  "tft-static-es_mx.json": "ok 339946 bytes"
+ },
+ "updated": "2026-11-28T07:57:45Z"
+}
